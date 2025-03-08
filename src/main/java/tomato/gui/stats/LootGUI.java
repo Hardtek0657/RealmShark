@@ -30,6 +30,15 @@ public class LootGUI extends JPanel {
     private static Font mainFont;
     private static int lootDrops;
     private boolean disableLootSharing = false;
+    public static boolean filterWhiteBag = true;
+    public static boolean filterOrangeBag = true;
+    public static boolean filterRedBag = true;
+    public static boolean filterGoldBag = true;
+    public static boolean filterEggBag = true;
+    public static boolean filterBlueBag = true;
+    public static boolean filterTealBag = true;
+    public static boolean filterPurpleBag = true;
+
 
     public LootGUI(TomatoData data) {
         this.data = data;
@@ -64,35 +73,21 @@ public class LootGUI extends JPanel {
     }
 
     private void updateGui(MapInfoPacket map, Entity bag, Entity dropper, Entity player, long time) {
-//        int exaltBonus = -1;
-//        long lootTime = 0;
-//        if (player != null) {
-//            exaltBonus = RealmCharacter.exaltLootBonus(player.objectType);
-//            lootTime = player.lootDropTime(time);
-//        }
-//
-//        String mobName = "";
-//        String mapName = "";
-//        String dungeonBonus = "";
-//        String exaltString = "";
-//        String lootDropString = "";
-//        if (dropper != null) {
-//            mobName = dropper.name() + "[" + dropper.id + "] - ";
-//        }
-//        if (map != null) {
-//            mapName = map.name;
-//            dungeonBonus = dungeonBuff(map.dungeonModifiers3);
-//        }
-//        if (exaltBonus != -1) {
-//            exaltString = " Exalt: " + exaltBonus + "%";
-//        }
-//        if (lootTime > 0) {
-//            lootDropString = " LD-bonus ";
-//        }
-//        String s = time() + "  " + mapName + dungeonBonus + exaltString + lootDropString + " - " + mobName + LootBags.lootBagName(bag.objectType) + ": " + lootInfo(bag) + "\n";
-//        textArea.append(s);
 
         if (player == null || !update) return;
+
+        // Determine if the loot bag is valid based on filters
+        boolean validLootBag = true;
+        if (isWhiteBag(bag) && !filterWhiteBag) validLootBag = false;
+        if (isOrangeBag(bag) && !filterOrangeBag) validLootBag = false;
+        if (isRedBag(bag) && !filterRedBag) validLootBag = false;
+        if (isGoldBag(bag) && !filterGoldBag) validLootBag = false;
+        if (isEggBag(bag) && !filterEggBag) validLootBag = false;
+        if (isBlueBag(bag) && !filterBlueBag) validLootBag = false;
+        if (isTealBag(bag) && !filterTealBag) validLootBag = false;
+        if (isPurpleBag(bag) && !filterPurpleBag) validLootBag = false;
+
+        // Play corresponding sounds based on the bag type
         if (Sound.playWhiteBagSound && isWhiteBag(bag)) {
             Sound.whitebag.play();
         }
@@ -108,12 +103,34 @@ public class LootGUI extends JPanel {
         if (Sound.playEggBagSound && isEggBag(bag)) {
             Sound.eggbag.play();
         }
-        JPanel panel = createMainBox(map, bag, dropper, player, time);
-        lootPanel.add(panel, 0);
-        INSTANCE.guiUpdate();
+
+        // **Send loot regardless of the filter**
         if (!disableLootSharing) {
             SendLoot.sendLoot(data, map, bag, dropper, player, time);
         }
+
+        // **Only create and add the panel if the loot bag is valid**
+        if (validLootBag) {
+            JPanel panel = createMainBox(map, bag, dropper, player, time);
+            lootPanel.add(panel, 0);
+            INSTANCE.guiUpdate();
+        }
+    }
+
+
+    private boolean isPurpleBag(Entity bag) {
+        int id = bag.objectType;
+        return id == LootBags.PURPLE.getId() || id == LootBags.BOOSTED_PURPLE.getId();
+    }
+
+    private boolean isTealBag(Entity bag) {
+        int id = bag.objectType;
+        return id == LootBags.TEAL.getId() || id == LootBags.BOOSTED_TEAL.getId();
+    }
+
+    private boolean isBlueBag(Entity bag) {
+        int id = bag.objectType;
+        return id == LootBags.BLUE.getId() || id == LootBags.BOOSTED_BLUE.getId();
     }
 
     private boolean isWhiteBag(Entity bag) {
@@ -138,7 +155,7 @@ public class LootGUI extends JPanel {
 
     private boolean isEggBag(Entity bag) {
         int id = bag.objectType;
-        return id == LootBags.RED.getId() || id == LootBags.BOOSTED_RED.getId();
+        return id == LootBags.EGG.getId() || id == LootBags.BOOSTED_EGG.getId();
     }
 
     private void guiUpdate() {
