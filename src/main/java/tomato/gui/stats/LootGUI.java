@@ -20,6 +20,7 @@ import java.time.format.DateTimeFormatter;
 
 public class LootGUI extends JPanel {
 
+
     private static LootGUI INSTANCE;
 
     private static TomatoData data;
@@ -30,20 +31,20 @@ public class LootGUI extends JPanel {
     private static Font mainFont;
     private static int lootDrops;
     private boolean disableLootSharing = false;
-    public static boolean filterWhiteBag = true;
-    public static boolean filterOrangeBag = true;
-    public static boolean filterRedBag = true;
-    public static boolean filterGoldBag = true;
-    public static boolean filterEggBag = true;
-    public static boolean filterBlueBag = true;
-    public static boolean filterTealBag = true;
-    public static boolean filterPurpleBag = true;
+    public static boolean filterWhiteBag = false;
+    public static boolean filterOrangeBag = false;
+    public static boolean filterRedBag = false;
+    public static boolean filterGoldBag = false;
+    public static boolean filterEggBag = false;
+    public static boolean filterBlueBag = false;
+    public static boolean filterTealBag = false;
+    public static boolean filterPurpleBag = false;
 
 
     public LootGUI(TomatoData data) {
-        this.data = data;
+        LootGUI.data = data;
         lootDrops = 0;
-        this.INSTANCE = this;
+        INSTANCE = this;
         setLayout(new BorderLayout());
 
         lootPanel = new JPanel();
@@ -73,50 +74,52 @@ public class LootGUI extends JPanel {
     }
 
     private void updateGui(MapInfoPacket map, Entity bag, Entity dropper, Entity player, long time) {
-
         if (player == null || !update) return;
 
-        // Determine if the loot bag is valid based on filters
-        boolean validLootBag = true;
-        if (isWhiteBag(bag) && !filterWhiteBag) validLootBag = false;
-        if (isOrangeBag(bag) && !filterOrangeBag) validLootBag = false;
-        if (isRedBag(bag) && !filterRedBag) validLootBag = false;
-        if (isGoldBag(bag) && !filterGoldBag) validLootBag = false;
-        if (isEggBag(bag) && !filterEggBag) validLootBag = false;
-        if (isBlueBag(bag) && !filterBlueBag) validLootBag = false;
-        if (isTealBag(bag) && !filterTealBag) validLootBag = false;
-        if (isPurpleBag(bag) && !filterPurpleBag) validLootBag = false;
+        JPanel panel = createMainBox(map, bag, dropper, player, time);
+        lootPanel.add(panel, 0);
 
-        // Play corresponding sounds based on the bag type
-        if (Sound.playWhiteBagSound && isWhiteBag(bag)) {
-            Sound.whitebag.play();
-        }
-        if (Sound.playOrangeBagSound && isOrangeBag(bag)) {
-            Sound.orangebag.play();
-        }
-        if (Sound.playRedBagSound && isRedBag(bag)) {
-            Sound.redbag.play();
-        }
-        if (Sound.playGoldBagSound && isGoldBag(bag)) {
-            Sound.goldbag.play();
-        }
-        if (Sound.playEggBagSound && isEggBag(bag)) {
-            Sound.eggbag.play();
-        }
+        panel.setVisible(isBagVisible(bag));
 
-        // **Send loot regardless of the filter**
+        if (Sound.playWhiteBagSound && isWhiteBag(bag)) Sound.whitebag.play();
+        if (Sound.playOrangeBagSound && isOrangeBag(bag)) Sound.orangebag.play();
+        if (Sound.playRedBagSound && isRedBag(bag)) Sound.redbag.play();
+        if (Sound.playGoldBagSound && isGoldBag(bag)) Sound.goldbag.play();
+        if (Sound.playRedBagSound && isEggBag(bag)) Sound.redbag.play();
+
         if (!disableLootSharing) {
             SendLoot.sendLoot(data, map, bag, dropper, player, time);
         }
 
-        // **Only create and add the panel if the loot bag is valid**
-        if (validLootBag) {
-            JPanel panel = createMainBox(map, bag, dropper, player, time);
-            lootPanel.add(panel, 0);
-            INSTANCE.guiUpdate();
-        }
+        INSTANCE.guiUpdate();
     }
 
+    private boolean isBagVisible(Entity bag) {
+        if (isWhiteBag(bag) && !filterWhiteBag) return false;
+        if (isOrangeBag(bag) && !filterOrangeBag) return false;
+        if (isRedBag(bag) && !filterRedBag) return false;
+        if (isGoldBag(bag) && !filterGoldBag) return false;
+        if (isEggBag(bag) && !filterEggBag) return false;
+        if (isBlueBag(bag) && !filterBlueBag) return false;
+        if (isTealBag(bag) && !filterTealBag) return false;
+        if (isPurpleBag(bag) && !filterPurpleBag) return false;
+        return true; // Show if no filter prevents it
+    }
+
+    public static void applyFilters() {
+        Component[] components = lootPanel.getComponents();
+        for (Component component : components) {
+            if (component instanceof JPanel) {
+                JPanel lootEntry = (JPanel) component;
+                Entity bag = (Entity) lootEntry.getClientProperty("bagEntity");
+                if (bag != null) {
+                    lootEntry.setVisible(INSTANCE.isBagVisible(bag));
+                }
+            }
+        }
+        lootPanel.revalidate();
+        lootPanel.repaint();
+    }
 
     private boolean isPurpleBag(Entity bag) {
         int id = bag.objectType;
@@ -167,6 +170,8 @@ public class LootGUI extends JPanel {
         JPanel mainPanel = new JPanel();
         mainPanel.setBorder(BorderFactory.createCompoundBorder(BorderFactory.createMatteBorder(0, 0, 1, 0, Color.gray), BorderFactory.createEmptyBorder(0, 20, 0, 20)));
         mainPanel.setLayout(new BoxLayout(mainPanel, BoxLayout.X_AXIS));
+
+        mainPanel.putClientProperty("bagEntity", bag); // Store the bag entity for filtering
         int y = 24;
         int width = 30;
 
@@ -316,6 +321,7 @@ public class LootGUI extends JPanel {
                 comp.setMinimumSize(new Dimension(24, 24));
                 panel.add(comp);
             }
+            assert sd != null;
             int statValue = sd.statValue;
             JLabel icon = new JLabel(ImageBuffer.getOutlinedIcon(statValue, 20));
             String itemName = IdToAsset.objectName(statValue);
@@ -470,17 +476,4 @@ public class LootGUI extends JPanel {
     public static void lootSharing(boolean b) {
         INSTANCE.disableLootSharing = b;
     }
-
-//    private void updateFont(Component c) {
-//        charPanel.removeAll();
-//        for (ParsePanelGUI.Player p : playerDisplay.values()) {
-//            p.panel = createMainBox(p, p.playerEntity);
-//            charPanel.add(p.panel);
-//        }
-//    }
-//
-//    public static void editFont(Font font) {
-//        mainFont = font;
-//        INSTANCE.updateFont(charPanel);
-//    }
 }
