@@ -19,7 +19,9 @@ public class StatisticsGUI extends JPanel {
 
         // Initialize and connect the fame table bridge
         FameTableBridge.initialize();
-        FameTableBridge.getInstance().setFameTablePanel(fameTable);
+        FameTableBridge bridge = FameTableBridge.getInstance();
+        bridge.setFameTablePanel(fameTable);
+        bridge.setFameTrackerGUI(fameTracker);
 
         LootGUI loot = new LootGUI(data);
         tabbedPane.addTab("Loot", loot);
