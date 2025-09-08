@@ -9,17 +9,16 @@ import tomato.backend.data.Entity;
 import tomato.backend.data.TomatoData;
 import tomato.gui.SmartScroller;
 import tomato.gui.dps.IconDpsGUI;
-import tomato.gui.stats.utils.BaseStatsPanel;
-import tomato.gui.stats.utils.FormatUtils;
-import tomato.gui.stats.utils.UIComponentUtils;
 import tomato.realmshark.*;
 import tomato.realmshark.enums.CharacterStatistics;
 import tomato.realmshark.enums.LootBags;
 
 import javax.swing.*;
 import java.awt.*;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 
-public class LootGUI extends BaseStatsPanel {
+public class LootGUI extends JPanel {
 
 
     private static LootGUI INSTANCE;
@@ -28,6 +27,8 @@ public class LootGUI extends BaseStatsPanel {
     private static boolean cleared = false;
     private static boolean update = false;
     private static JPanel lootPanel;
+    private static JTextArea textArea;
+    private static Font mainFont;
     private static int lootDrops;
     private boolean disableLootSharing = false;
     public static boolean filterWhiteBag = false;
@@ -46,25 +47,19 @@ public class LootGUI extends BaseStatsPanel {
         LootGUI.data = data;
         lootDrops = 0;
         INSTANCE = this;
-        initializePanel();
-    }
-
-    @Override
-    protected void initializePanel() {
         setLayout(new BorderLayout());
 
-        lootPanel = UIComponentUtils.createVerticalPanel();
+        lootPanel = new JPanel();
+
+        lootPanel.setLayout(new BoxLayout(lootPanel, BoxLayout.Y_AXIS));
+
         lootPanel.add(new JLabel("Change instance to see loot info."));
         validate();
 
-        JScrollPane scroll = UIComponentUtils.createStandardScrollPane(lootPanel);
+        JScrollPane scroll = new JScrollPane(lootPanel);
+        scroll.getVerticalScrollBar().setUnitIncrement(40);
         new SmartScroller(scroll, 0);
         add(scroll, BorderLayout.CENTER);
-    }
-
-    @Override
-    protected void updateGUI() {
-        refreshPanel();
     }
 
     public static void update(MapInfoPacket map, Entity bag, Entity dropper, Entity player, long time) {
@@ -76,7 +71,7 @@ public class LootGUI extends BaseStatsPanel {
         if (!cleared) {
             cleared = true;
             lootPanel.removeAll();
-            INSTANCE.safeRefreshPanel();
+            INSTANCE.guiUpdate();
         }
     }
 
@@ -99,7 +94,7 @@ public class LootGUI extends BaseStatsPanel {
             SendLoot.sendLoot(data, map, bag, dropper, player, time);
         }
 
-        safeRefreshPanel();
+        INSTANCE.guiUpdate();
     }
 
     private boolean isBagVisible(Entity bag) {
@@ -182,7 +177,8 @@ public class LootGUI extends BaseStatsPanel {
     }
 
     private void guiUpdate() {
-        safeRefreshPanel();
+        revalidate();
+        repaint();
     }
 
     private static JPanel createMainBox(MapInfoPacket map, Entity bag, Entity dropper, Entity player, long time) {
@@ -253,7 +249,7 @@ public class LootGUI extends BaseStatsPanel {
             o.setAlignmentX(JLabel.LEFT);
             o.setAlignmentX(LEFT_ALIGNMENT);
             timeLabel.setHorizontalAlignment(SwingConstants.LEFT);
-            timeLabel.setFont(getMainFont());
+            timeLabel.setFont(mainFont);
             o.add(timeLabel);
         } catch (Exception e) {
             e.printStackTrace();
@@ -272,14 +268,14 @@ public class LootGUI extends BaseStatsPanel {
         o.setLayout(new BorderLayout());
 
         try {
-            String text = FormatUtils.getTimeShort();
+            String text = timeShort();
             JLabel timeLabel = new JLabel(text, JLabel.CENTER);
 
             timeLabel.setAlignmentX(JLabel.LEFT);
             o.setAlignmentX(JLabel.LEFT);
             o.setAlignmentX(LEFT_ALIGNMENT);
             timeLabel.setHorizontalAlignment(SwingConstants.LEFT);
-            timeLabel.setFont(getMainFont());
+            timeLabel.setFont(mainFont);
             o.add(timeLabel);
         } catch (Exception e) {
             e.printStackTrace();
@@ -397,7 +393,7 @@ public class LootGUI extends BaseStatsPanel {
     private static void displayBagIcon(Entity entity, long lootTime, JPanel panel) {
         int bag = entity.objectType;
         JLabel icon = new JLabel(ImageBuffer.getOutlinedIcon(bag, 20));
-        String name = FormatUtils.getTimeFull();
+        String name = time();
         name += "<br>" + IdToAsset.objectName(bag);
         if (lootTime > 0) {
             name += "<br>Loot drop bonus 50%";
@@ -470,6 +466,44 @@ public class LootGUI extends BaseStatsPanel {
         panel.add(icon);
     }
 
+    public static String timeShort() {
+        DateTimeFormatter dateTimeFormat = DateTimeFormatter.ofPattern("HH:mm:ss");
+        LocalDateTime dateTime = LocalDateTime.now();
+        return dateTimeFormat.format(dateTime);
+    }
+
+    public static String time() {
+        DateTimeFormatter dateTimeFormat = DateTimeFormatter.ofPattern("yyyy/MM/dd-HH:mm:ss");
+        LocalDateTime dateTime = LocalDateTime.now();
+        return dateTimeFormat.format(dateTime);
+    }
+
+    private String lootInfo(Entity entity) {
+        StringBuilder s = new StringBuilder();
+        boolean first = true;
+        String[] enchants = null;
+
+        StatData udata = entity.stat.get(StatType.UNIQUE_DATA_STRING);
+        if (udata != null && udata.stringStatValue != null) {
+            enchants = udata.stringStatValue.split(",");
+        }
+
+        for (int i = 0; i < 8; i++) {
+            StatData sd = entity.stat.get(StatType.INVENTORY_0_STAT.get() + i);
+            if (sd == null) continue;
+            int statValue = sd.statValue;
+            if (statValue < 1) continue;
+            if (!first) s.append(" * ");
+            first = false;
+            s.append(IdToAsset.objectName(statValue));
+            if (enchants != null && i < enchants.length && !enchants[i].isEmpty() && !enchants[i].equals("AAIE_f_9__3__f8=")) {
+                s.append("[E]");
+            }
+            s.append("[").append(statValue).append("]");
+        }
+        return s.toString();
+    }
+
     private static String dungeonBuff(String buffs) {
         String b = "";
         for (String s : buffs.split(";")) {
@@ -490,14 +524,7 @@ public class LootGUI extends BaseStatsPanel {
         return s.charAt(s.length() - 1) - 48;
     }
 
-    public static void editFont(Font font) {
-        if (INSTANCE != null) {
-            INSTANCE.handleFontUpdate(font);
-        }
-    }
-
     public static void lootSharing(boolean b) {
         INSTANCE.disableLootSharing = b;
     }
-}
 }

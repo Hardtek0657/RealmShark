@@ -15,47 +15,46 @@ import tomato.backend.data.DungeonStatData.DungeonInfo;
 import tomato.backend.data.DungeonStatData.Loot;
 import tomato.gui.SmartScroller;
 import tomato.gui.dps.DpsGUI;
-import tomato.gui.stats.utils.BaseStatsPanel;
-import tomato.gui.stats.utils.UIComponentUtils;
 
-public class DungeonStats extends BaseStatsPanel {
+public class DungeonStats extends JPanel {
 
     private static DungeonStats INSTANCE;
 
     private static JPanel dungeonStatPanel;
     private static JPanel radioPanel;
+    private static Font mainFont;
     private DungeonStatData dungeonStatData;
     private int dungeonSize;
     private String selectionName;
 
     public DungeonStats() {
         this.INSTANCE = this;
-        initializePanel();
-    }
-
-    @Override
-    protected void initializePanel() {
         setLayout(new BorderLayout());
 
-        dungeonStatPanel = UIComponentUtils.createVerticalPanel();
-        radioPanel = UIComponentUtils.createVerticalPanel();
+        dungeonStatPanel = new JPanel();
+        dungeonStatPanel.setLayout(
+            new BoxLayout(dungeonStatPanel, BoxLayout.Y_AXIS)
+        );
+        radioPanel = new JPanel();
+        radioPanel.setLayout(new BoxLayout(radioPanel, BoxLayout.Y_AXIS));
         radioPanel.setBorder(
             BorderFactory.createMatteBorder(0, 1, 0, 0, Color.GRAY)
         );
 
         validate();
 
-        JScrollPane scrollMid = UIComponentUtils.createStandardScrollPane(dungeonStatPanel);
+        JScrollPane scrollMid = new JScrollPane(dungeonStatPanel);
+        scrollMid.getVerticalScrollBar().setUnitIncrement(40);
         new SmartScroller(scrollMid, 0);
         add(scrollMid, BorderLayout.CENTER);
 
-        JScrollPane scrollRight = UIComponentUtils.createStandardScrollPane(radioPanel);
+        JScrollPane scrollRight = new JScrollPane(radioPanel);
+        scrollRight.getVerticalScrollBar().setUnitIncrement(40);
         new SmartScroller(scrollRight, 0);
         add(scrollRight, BorderLayout.EAST);
     }
 
-    @Override
-    protected void updateGUI() {
+    private void updateGUI() {
         if (
             dungeonStatData == null ||
             dungeonStatData.data == null ||
@@ -70,13 +69,13 @@ public class DungeonStats extends BaseStatsPanel {
         }
         dungeonStatPanel.add(Box.createVerticalGlue());
 
-        refreshPanel();
+        revalidate();
     }
 
     private void radioAction(ActionEvent actionEvent) {
         JRadioButton button = (JRadioButton) actionEvent.getSource();
         selectionName = button.getText();
-        safeUpdateGUI();
+        updateGUI();
     }
 
     private void updateRadioButtons() {
@@ -98,19 +97,22 @@ public class DungeonStats extends BaseStatsPanel {
             radioPanel.add(b);
         }
 
-        refreshPanel();
+        revalidate();
     }
 
     private void displayDungeon(DungeonInfo info) {
         JPanel titlePanel = new JPanel();
         titlePanel.setBorder(
-            UIComponentUtils.createTitledBorder(
+            BorderFactory.createTitledBorder(
+                null,
                 info.getName() +
                 " [" +
                 info.getEnteredDungeon() +
                 "] " +
                 DpsGUI.systemTimeToString(info.getTotalTime()),
-                getMainFont()
+                TitledBorder.CENTER,
+                TitledBorder.CENTER,
+                mainFont
             )
         );
         dungeonStatPanel.add(titlePanel);
@@ -166,7 +168,7 @@ public class DungeonStats extends BaseStatsPanel {
                 l = new JLabel(mobName, JLabel.LEFT);
             }
 
-            l.setFont(getMainFont());
+            l.setFont(mainFont);
             l.setToolTipText(
                 "Total number of hits on mob type (not confirmed killed or soulbound)"
             );
@@ -195,7 +197,7 @@ public class DungeonStats extends BaseStatsPanel {
                 ImageBuffer.getOutlinedIcon(idItem, 16),
                 JLabel.LEFT
             );
-            itemLabel.setFont(getMainFont());
+            itemLabel.setFont(mainFont);
             list.add(itemLabel);
         }
 
@@ -213,12 +215,11 @@ public class DungeonStats extends BaseStatsPanel {
         INSTANCE.updateRadioButtons();
         if (
             dungeon == null || dungeon.equals(INSTANCE.selectionName)
-        ) INSTANCE.safeUpdateGUI();
+        ) INSTANCE.updateGUI();
     }
 
     public static void editFont(Font font) {
-        if (INSTANCE != null) {
-            INSTANCE.handleFontUpdate(font);
-        }
+        mainFont = font;
+        INSTANCE.updateGUI();
     }
 }

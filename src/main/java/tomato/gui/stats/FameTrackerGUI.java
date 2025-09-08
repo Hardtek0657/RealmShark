@@ -8,10 +8,8 @@ import javax.swing.*;
 import tomato.gui.stats.data.MapFameData;
 import tomato.gui.stats.session.FameSession;
 import tomato.gui.stats.session.FameSessionManager;
-import tomato.gui.stats.utils.BaseStatsPanel;
-import tomato.gui.stats.utils.UIComponentUtils;
 
-public class FameTrackerGUI extends BaseStatsPanel {
+public class FameTrackerGUI extends JPanel {
 
     private static FameTrackerGUI INSTANCE;
 
@@ -27,11 +25,6 @@ public class FameTrackerGUI extends BaseStatsPanel {
 
     public FameTrackerGUI() {
         INSTANCE = this;
-        initializePanel();
-    }
-
-    @Override
-    protected void initializePanel() {
         setLayout(new BorderLayout());
 
         scores = new ArrayList<>();
@@ -48,20 +41,15 @@ public class FameTrackerGUI extends BaseStatsPanel {
         JPanel navigationPanel = createNavigationPanel();
 
         // Create container panel with navigation above graph
-        JPanel containerPanel = UIComponentUtils.createMainPanel();
+        JPanel containerPanel = new JPanel(new BorderLayout());
         containerPanel.add(navigationPanel, BorderLayout.NORTH);
         containerPanel.add(graphPanel, BorderLayout.CENTER);
 
         add(containerPanel);
     }
 
-    @Override
-    protected void updateGUI() {
-        refreshPanel();
-    }
-
     private JPanel createNavigationPanel() {
-        JPanel navPanel = UIComponentUtils.createNavigationPanel();
+        JPanel navPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 5, 5));
 
         // Add time range buttons from graph panel
         navPanel.add(graphPanel.createTimeRangeButtons());
