@@ -1,6 +1,9 @@
 package tomato.backend.data;
 
 import assets.IdToAsset;
+import java.io.Serializable;
+import java.util.*;
+import java.util.stream.Collectors;
 import packets.data.ObjectStatusData;
 import packets.data.StatData;
 import packets.data.WorldPosData;
@@ -12,17 +15,15 @@ import tomato.gui.character.CharacterStatMaxingGUI;
 import tomato.gui.dps.DpsGUI;
 import tomato.gui.myinfo.MyInfoGUI;
 import tomato.gui.security.ParsePanelGUI;
+import tomato.gui.stats.FameTableBridge;
 import tomato.realmshark.RealmCharacter;
 import tomato.realmshark.enums.CharacterClass;
 
-import java.io.Serializable;
-import java.util.*;
-import java.util.stream.Collectors;
-
 public class Entity implements Serializable {
+
     private boolean isUser;
     public final Stat stat;
-    transient private final TomatoData tomatoData;
+    private final transient TomatoData tomatoData;
     public final int id;
     public int objectType;
     private long creationTime;
@@ -41,12 +42,13 @@ public class Entity implements Serializable {
     public long stasisCounter;
     public boolean dammahCountered;
 
-    private final static int ORYX_THE_MAD_GOD = 45363;
-    private final static int ORYX_THE_MAD_GOD_GUARD_ANIMATION = -935464302;
-    private final static int ORYX_THE_MAD_GOD_GUARD_EXALTED_ANIMATION = -918686683;
-    private final static int CHANCELLOR_DAMMAH = 9635;
-    private final static int FORGOTTEN_KING = 29039;
-    private final static int FORGOTTEN_KING_REFLECTOR_ANIMATION = -123818367;
+    private static final int ORYX_THE_MAD_GOD = 45363;
+    private static final int ORYX_THE_MAD_GOD_GUARD_ANIMATION = -935464302;
+    private static final int ORYX_THE_MAD_GOD_GUARD_EXALTED_ANIMATION =
+        -918686683;
+    private static final int CHANCELLOR_DAMMAH = 9635;
+    private static final int FORGOTTEN_KING = 29039;
+    private static final int FORGOTTEN_KING_REFLECTOR_ANIMATION = -123818367;
     private long lootDropTime;
     private long lootTierTime;
 
@@ -141,7 +143,7 @@ public class Entity implements Serializable {
     }
 
     public void entityDropped(long time) {
-//        updates.add(status); // TODO fix time
+        //        updates.add(status); // TODO fix time
     }
 
     /**
@@ -154,7 +156,8 @@ public class Entity implements Serializable {
         boolean weak = (condition & ConditionBits.WEAK.value()) != 0;
         boolean damaging = (condition & ConditionBits.DAMAGING.value()) != 0;
         int attack = stat.get(StatType.ATTACK_STAT).statValue;
-        float exaltDmgBonus = (float) stat.get(StatType.EXALTATION_BONUS_DAMAGE).statValue / 1000;
+        float exaltDmgBonus =
+            (float) stat.get(StatType.EXALTATION_BONUS_DAMAGE).statValue / 1000;
 
         if (weak) {
             return 0.5f;
@@ -166,16 +169,31 @@ public class Entity implements Serializable {
         return number * exaltDmgBonus;
     }
 
-    public void userProjectileHit(Entity attacker, Projectile projectile, long timePc) {
+    public void userProjectileHit(
+        Entity attacker,
+        Projectile projectile,
+        long timePc
+    ) {
         if (projectile == null || projectile.getDamage() == 0) return;
 
         int[] conditions = new int[2];
 
-        conditions[0] = stat.get(StatType.CONDITION_STAT) == null ? 0 : stat.get(StatType.CONDITION_STAT).statValue;
-        conditions[1] = stat.get(StatType.NEW_CON_STAT) == null ? 0 : stat.get(StatType.NEW_CON_STAT).statValue;
-        int defence = stat.get(StatType.DEFENSE_STAT) == null ? 0 : stat.get(StatType.DEFENSE_STAT).statValue;
+        conditions[0] = stat.get(StatType.CONDITION_STAT) == null
+            ? 0
+            : stat.get(StatType.CONDITION_STAT).statValue;
+        conditions[1] = stat.get(StatType.NEW_CON_STAT) == null
+            ? 0
+            : stat.get(StatType.NEW_CON_STAT).statValue;
+        int defence = stat.get(StatType.DEFENSE_STAT) == null
+            ? 0
+            : stat.get(StatType.DEFENSE_STAT).statValue;
 
-        int dmg = Projectile.damageWithDefense(projectile.getDamage(), projectile.isArmorPiercing(), defence, conditions);
+        int dmg = Projectile.damageWithDefense(
+            projectile.getDamage(),
+            projectile.isArmorPiercing(),
+            defence,
+            conditions
+        );
 
         if (dmg > 0) {
             Damage damage = new Damage(attacker, projectile, timePc, dmg);
@@ -184,7 +202,11 @@ public class Entity implements Serializable {
         }
     }
 
-    public void genericDamageHit(Entity attacker, Projectile projectile, long time) {
+    public void genericDamageHit(
+        Entity attacker,
+        Projectile projectile,
+        long time
+    ) {
         if (projectile == null || projectile.getDamage() == 0) return;
         Damage damage = new Damage(attacker, projectile, time);
         bossPhaseDamage(damage);
@@ -195,7 +217,9 @@ public class Entity implements Serializable {
         damageList.add(damage);
         if (damage.owner != null) {
             int id = damage.owner.id;
-            Damage dmg = damagePlayer.computeIfAbsent(id, a -> new Damage(damage.owner));
+            Damage dmg = damagePlayer.computeIfAbsent(id, a ->
+                new Damage(damage.owner)
+            );
             dmg.add(damage);
         }
     }
@@ -210,16 +234,19 @@ public class Entity implements Serializable {
     private int calculatePlayerDmg(int dmg, boolean ap) {
         int def = stat.get(StatType.DEFENSE_STAT).statValue;
         int condition = stat.get(StatType.CONDITION_STAT).statValue;
-        boolean invulnerable = (condition & ConditionBits.INVULNERABLE.value()) != 0;
+        boolean invulnerable =
+            (condition & ConditionBits.INVULNERABLE.value()) != 0;
 
         if (invulnerable) {
             return 0;
         }
 
-        boolean armorBroken = (condition & ConditionBits.ARMORBROKEN.value()) != 0;
+        boolean armorBroken =
+            (condition & ConditionBits.ARMORBROKEN.value()) != 0;
         boolean armored = (condition & ConditionBits.ARMORED.value()) != 0;
         boolean exposed = (condition & ConditionNewBits.EXPOSED.value()) != 0;
-        boolean petrified = (condition & ConditionNewBits.PETRIFIED.value()) != 0;
+        boolean petrified =
+            (condition & ConditionNewBits.PETRIFIED.value()) != 0;
         boolean cursed = (condition & ConditionNewBits.CURSE.value()) != 0;
 
         if (ap || armorBroken) {
@@ -244,13 +271,28 @@ public class Entity implements Serializable {
     }
 
     private void bossPhaseDamage(Damage damage) {
-        damage.oryx3GuardDmg = objectType == ORYX_THE_MAD_GOD && stat.get(StatType.ANIMATION_STAT) != null && (stat.get(StatType.ANIMATION_STAT).statValue == ORYX_THE_MAD_GOD_GUARD_ANIMATION || stat.get(StatType.ANIMATION_STAT).statValue == ORYX_THE_MAD_GOD_GUARD_EXALTED_ANIMATION);
-        damage.walledGardenReflectors = objectType == FORGOTTEN_KING && stat.get(StatType.ANIMATION_STAT) != null && (stat.get(StatType.ANIMATION_STAT).statValue == FORGOTTEN_KING_REFLECTOR_ANIMATION && tomatoData.floorPlanCrystals() == 12);
-        damage.chancellorDammahDmg = objectType == CHANCELLOR_DAMMAH && !dammahCountered;
+        damage.oryx3GuardDmg =
+            objectType == ORYX_THE_MAD_GOD &&
+            stat.get(StatType.ANIMATION_STAT) != null &&
+            (stat.get(StatType.ANIMATION_STAT).statValue ==
+                    ORYX_THE_MAD_GOD_GUARD_ANIMATION ||
+                stat.get(StatType.ANIMATION_STAT).statValue ==
+                ORYX_THE_MAD_GOD_GUARD_EXALTED_ANIMATION);
+        damage.walledGardenReflectors =
+            objectType == FORGOTTEN_KING &&
+            stat.get(StatType.ANIMATION_STAT) != null &&
+            (stat.get(StatType.ANIMATION_STAT).statValue ==
+                    FORGOTTEN_KING_REFLECTOR_ANIMATION &&
+                tomatoData.floorPlanCrystals() == 12);
+        damage.chancellorDammahDmg =
+            objectType == CHANCELLOR_DAMMAH && !dammahCountered;
     }
 
     public String name() {
-        if (CharacterClass.isPlayerCharacter(objectType) && stat.get(StatType.NAME_STAT) != null) {
+        if (
+            CharacterClass.isPlayerCharacter(objectType) &&
+            stat.get(StatType.NAME_STAT) != null
+        ) {
             return stat.get(StatType.NAME_STAT).stringStatValue.split(",")[0];
         }
         return name;
@@ -281,7 +323,9 @@ public class Entity implements Serializable {
     }
 
     public List<Damage> getPlayerDamageList() {
-        return Arrays.stream(damagePlayer.values().toArray(new Damage[0])).sorted(Comparator.comparingInt(Damage::getDamage).reversed()).collect(Collectors.toList());
+        return Arrays.stream(damagePlayer.values().toArray(new Damage[0]))
+            .sorted(Comparator.comparingInt(Damage::getDamage).reversed())
+            .collect(Collectors.toList());
     }
 
     public int playersRemainAtKill() {
@@ -312,32 +356,61 @@ public class Entity implements Serializable {
     private int[] calculateBaseStats() {
         int[] base = new int[8];
 
-        base[0] = stat.get(StatType.MAX_HP_STAT).statValue - stat.get(StatType.MAX_HP_BOOST_STAT).statValue;
-        base[1] = stat.get(StatType.MAX_MP_STAT).statValue - stat.get(StatType.MAX_MP_BOOST_STAT).statValue;
-        base[2] = stat.get(StatType.ATTACK_STAT).statValue - stat.get(StatType.ATTACK_BOOST_STAT).statValue;
-        base[3] = stat.get(StatType.DEFENSE_STAT).statValue - stat.get(StatType.DEFENSE_BOOST_STAT).statValue;
-        base[4] = stat.get(StatType.SPEED_STAT).statValue - stat.get(StatType.SPEED_BOOST_STAT).statValue;
-        base[5] = stat.get(StatType.DEXTERITY_STAT).statValue - stat.get(StatType.DEXTERITY_BOOST_STAT).statValue;
-        base[6] = stat.get(StatType.VITALITY_STAT).statValue - stat.get(StatType.VITALITY_BOOST_STAT).statValue;
-        base[7] = stat.get(StatType.WISDOM_STAT).statValue - stat.get(StatType.WISDOM_BOOST_STAT).statValue;
+        base[0] =
+            stat.get(StatType.MAX_HP_STAT).statValue -
+            stat.get(StatType.MAX_HP_BOOST_STAT).statValue;
+        base[1] =
+            stat.get(StatType.MAX_MP_STAT).statValue -
+            stat.get(StatType.MAX_MP_BOOST_STAT).statValue;
+        base[2] =
+            stat.get(StatType.ATTACK_STAT).statValue -
+            stat.get(StatType.ATTACK_BOOST_STAT).statValue;
+        base[3] =
+            stat.get(StatType.DEFENSE_STAT).statValue -
+            stat.get(StatType.DEFENSE_BOOST_STAT).statValue;
+        base[4] =
+            stat.get(StatType.SPEED_STAT).statValue -
+            stat.get(StatType.SPEED_BOOST_STAT).statValue;
+        base[5] =
+            stat.get(StatType.DEXTERITY_STAT).statValue -
+            stat.get(StatType.DEXTERITY_BOOST_STAT).statValue;
+        base[6] =
+            stat.get(StatType.VITALITY_STAT).statValue -
+            stat.get(StatType.VITALITY_BOOST_STAT).statValue;
+        base[7] =
+            stat.get(StatType.WISDOM_STAT).statValue -
+            stat.get(StatType.WISDOM_BOOST_STAT).statValue;
 
         return base;
     }
 
     /**
-     * Fame update from experience points.
+     * Updates player fame when experience changes.
      *
      * @param time
      */
     private void fame(long time) {
         long exp = Long.parseLong(stat.get(StatType.EXP_STAT).stringStatValue);
         FameTracker.trackFame(charId, exp, time);
+        long fame = (exp + 40071) / 2000;
         if (tomatoData.charMap != null) {
-            long fame = (exp + 40071) / 2000;
             RealmCharacter r = tomatoData.charMap.get(charId);
             if (r != null) {
                 r.fame = fame;
+                // Pass character class name to fame table
+                String className = r.classString != null
+                    ? r.classString
+                    : "Char " + charId;
+                FameTableBridge.updateFame(charId, fame, time, className);
+            } else {
+                // Try to get class name from ObjectType if character not in charMap
+                String className = getClassNameFromObjectType(charId);
+                FameTableBridge.updateFame(charId, fame, time, className);
             }
+        } else {
+            // Try to get class name from ObjectType if charMap is null
+            String className = getClassNameFromObjectType(charId);
+            FameTableBridge.updateFame(charId, fame, time, className);
         }
     }
 
@@ -386,6 +459,23 @@ public class Entity implements Serializable {
         String name = name();
         PlayerRemoved pr = new PlayerRemoved(dropId, hp, max, name, time);
         playerDropped.put(dropId, pr);
+    }
+
+    /**
+     * Attempts to get class name from ObjectType when character data is not available in charMap.
+     * This provides a fallback for displaying proper class names in the fame table.
+     */
+    private String getClassNameFromObjectType(int charId) {
+        // Try to get class name from current player's ObjectType if available
+        if (
+            tomatoData != null &&
+            tomatoData.player != null &&
+            CharacterClass.isPlayerCharacter(tomatoData.player.objectType)
+        ) {
+            return CharacterClass.getName(tomatoData.player.objectType);
+        }
+        // Fallback to generic character name
+        return "Char " + charId;
     }
 
     public double distSqrd(WorldPosData p) {

@@ -1,6 +1,8 @@
 package tomato.backend.data;
 
 import assets.IdToAsset;
+import java.io.IOException;
+import java.util.*;
 import packets.Packet;
 import packets.data.ObjectData;
 import packets.data.StatData;
@@ -25,14 +27,12 @@ import tomato.realmshark.enums.CharacterClass;
 import tomato.realmshark.enums.LootBags;
 import util.RNG;
 
-import java.io.IOException;
-import java.util.*;
-
 /**
  * Main data class storing all incoming packet data regarding an instance the user is in.
  * Resets the data after leaving the instance.
  */
 public class TomatoData {
+
     private String token;
     public MapInfoPacket map;
     protected int worldPlayerId;
@@ -56,16 +56,21 @@ public class TomatoData {
     public ArrayList<RealmCharacter> chars;
     public HashMap<Integer, RealmCharacter> charMap;
     public ArrayList<DpsData> dpsData = new ArrayList<>();
-    protected ArrayList<NotificationPacket> deathNotifications = new ArrayList<>();
+    protected ArrayList<NotificationPacket> deathNotifications =
+        new ArrayList<>();
     protected final HashMap<Integer, Entity> dropList = new HashMap<>();
     private ArrayList<Packet> dpsPacketLog = new ArrayList<>();
     private boolean petyard;
     private RealmCharacterStats currentCharacterStats;
     private final TreeSet<Integer> lootBags = new TreeSet<>();
     private int lootTickToggle = 0;
-    private final ArrayList<Entity>[] lootTickContainer = new ArrayList[]{new ArrayList<>(), new ArrayList<>()};
+    private final ArrayList<Entity>[] lootTickContainer = new ArrayList[] {
+        new ArrayList<>(),
+        new ArrayList<>(),
+    };
     private final ArrayList<Entity> killedEntitys = new ArrayList<>();
-    protected final HashMap<Long, Projectile> enemyProjectiles = new HashMap<>();
+    protected final HashMap<Long, Projectile> enemyProjectiles =
+        new HashMap<>();
     private final DungeonStatData dungeonStatData = new DungeonStatData();
     private int moonlightFlames = 0;
     private static final int MOONLIGHT_BOSS_FLAME_ID = 20518;
@@ -116,7 +121,10 @@ public class TomatoData {
     }
 
     private void updateDungeonStats(int charId, String str) {
-        if (currentCharacterStats == null || !currentCharacterStats.pcStats.equals(str)) {
+        if (
+            currentCharacterStats == null ||
+            !currentCharacterStats.pcStats.equals(str)
+        ) {
             currentCharacterStats = new RealmCharacterStats();
             currentCharacterStats.decode(str);
         }
@@ -125,7 +133,9 @@ public class TomatoData {
             return;
         }
         RealmCharacter r = charMap.get(charId);
-        if (r != null && r.charStats != null && !r.charStats.pcStats.equals(str)) {
+        if (
+            r != null && r.charStats != null && !r.charStats.pcStats.equals(str)
+        ) {
             r.updateCharStats(currentCharacterStats);
             CharacterStatsGUI.updateRealmChars();
             CharacterCollectionGUI.updateRealmChars();
@@ -184,9 +194,12 @@ public class TomatoData {
             Entity e = entityList.get(dropId);
             dropList.put(dropId, e);
             if (e != null) {
-//                e.entityDropped(timePc);
+                //                e.entityDropped(timePc);
                 if (isPlayerEntity(e.objectType)) {
-                    for (Map.Entry<Integer, Entity> dropCheck : entityHitList.entrySet()) {
+                    for (Map.Entry<
+                        Integer,
+                        Entity
+                    > dropCheck : entityHitList.entrySet()) {
                         int k = dropCheck.getKey();
                         if (!dropList.containsKey(k)) {
                             dropCheck.getValue().addPlayerDrop(dropId, timePc);
@@ -211,7 +224,9 @@ public class TomatoData {
     private void entityUpdate(ObjectData object) {
         int id = object.status.objectId;
         boolean newObject = !entityList.containsKey(id);
-        Entity entity = entityList.computeIfAbsent(id, idd -> new Entity(this, idd, timePc));
+        Entity entity = entityList.computeIfAbsent(id, idd ->
+            new Entity(this, idd, timePc)
+        );
         int idType = object.objectType;
         entity.entityUpdate(idType, object.status, timePc);
 
@@ -247,8 +262,8 @@ public class TomatoData {
      * @param idType ID of sound alert entity
      */
     private void customSoundAlert(int idType) {
-        for(int id : idEntityPing) {
-            if(idType == id) {
+        for (int id : idEntityPing) {
+            if (idType == id) {
                 Sound.custom.play();
                 break;
             }
@@ -356,7 +371,9 @@ public class TomatoData {
         setTime(p.serverRealTimeMS);
         for (int i = 0; i < p.status.length; i++) {
             int id = p.status[i].objectId;
-            Entity entity = entityList.computeIfAbsent(id, idd -> new Entity(this, idd, timePc));
+            Entity entity = entityList.computeIfAbsent(id, idd ->
+                new Entity(this, idd, timePc)
+            );
             entity.updateStats(p.status[i], timePc);
         }
         SecurityAbilityUseCheck.decreaseDecoyCounter();
@@ -369,7 +386,12 @@ public class TomatoData {
      * @param p Projectile info.
      */
     public void playerShoot(PlayerShootPacket p) {
-        projectiles[p.bulletId] = new Projectile(rng, player, p.weaponId, p.projectileId);
+        projectiles[p.bulletId] = new Projectile(
+            rng,
+            player,
+            p.weaponId,
+            p.projectileId
+        );
     }
 
     /**
@@ -379,12 +401,22 @@ public class TomatoData {
      */
     public void serverPlayerShoot(ServerPlayerShootPacket p) {
         if (p.bulletCount > 1) {
-            Projectile projectile = new Projectile(p.damage, p.containerType, p.bulletType, p.summonerId);
+            Projectile projectile = new Projectile(
+                p.damage,
+                p.containerType,
+                p.bulletType,
+                p.summonerId
+            );
             for (int j = p.bulletId; j < p.bulletId + p.bulletCount; j++) {
-                projectiles[j % 256 + 256] = projectile;
+                projectiles[(j % 256) + 256] = projectile;
             }
         } else if (p.bulletId > 255 && p.bulletId < 512) {
-            Projectile projectile = new Projectile(p.damage, p.containerType, p.bulletType, p.summonerId);
+            Projectile projectile = new Projectile(
+                p.damage,
+                p.containerType,
+                p.bulletType,
+                p.summonerId
+            );
             projectiles[p.bulletId] = projectile;
         }
     }
@@ -397,7 +429,9 @@ public class TomatoData {
     public void enemtyHit(EnemyHitPacket p) {
         Projectile projectile = projectiles[p.bulletId];
         int id = p.targetId;
-        Entity target = entityList.computeIfAbsent(id, idd -> new Entity(this, idd, timePc));
+        Entity target = entityList.computeIfAbsent(id, idd ->
+            new Entity(this, idd, timePc)
+        );
         int shooterId = p.shooterID;
         if (projectile != null && projectile.getSummonerId() != 0) {
             shooterId = projectile.getSummonerId();
@@ -420,7 +454,9 @@ public class TomatoData {
      */
     public void damage(DamagePacket p) {
         int id = p.targetId;
-        Entity target = entityList.computeIfAbsent(id, idd -> new Entity(this, idd, timePc));
+        Entity target = entityList.computeIfAbsent(id, idd ->
+            new Entity(this, idd, timePc)
+        );
         Entity attacker = playerList.get(p.objectId);
         if (p.damageAmount > 0) {
             Projectile projectile = new Projectile(p.damageAmount);
@@ -462,8 +498,7 @@ public class TomatoData {
             int btype = p.bulletType;
             try {
                 ap = IdToAsset.getIdProjectileArmorPierces(etype, btype);
-            } catch (Exception ignored) {
-            }
+            } catch (Exception ignored) {}
         }
         for (int i = 0; i < p.numShots; i++) {
             long id = p.ownerId + ((long) (p.bulletId + i) << 24);
@@ -479,7 +514,11 @@ public class TomatoData {
     public void aoeDamage(AoePacket p) {
         if (player != null) {
             if (player.distSqrd(p.pos) < (p.radius * p.radius)) {
-                player.userDamageTaken(null, timePc, new Projectile(p.damage, p.armorPiercing));
+                player.userDamageTaken(
+                    null,
+                    timePc,
+                    new Projectile(p.damage, p.armorPiercing)
+                );
             }
         }
     }
@@ -506,7 +545,7 @@ public class TomatoData {
      */
     private static boolean isLoggedDungeon(String dungName) {
         switch (dungName) {
-            case "{s.vault}":  // vault
+            case "{s.vault}": // vault
             case "Daily Quest Room": // quest room
             case "Pet Yard": // pet yard
             case "{s.guildhall}": // guild hall
@@ -526,7 +565,16 @@ public class TomatoData {
         charId = -1;
         time = -1;
         if (map != null && isLoggedDungeon(map.displayName)) {
-            dpsData.add(new DpsData(map, entityHitList, deathNotifications, dungeonTime(), timePcFirst, dpsPacketLog));
+            dpsData.add(
+                new DpsData(
+                    map,
+                    entityHitList,
+                    deathNotifications,
+                    dungeonTime(),
+                    timePcFirst,
+                    dpsPacketLog
+                )
+            );
             DpsGUI.updateLabel();
         }
         if (map != null) {
@@ -563,7 +611,16 @@ public class TomatoData {
     public void exaltUpdate(ExaltationUpdatePacket p) {
         int[] exalts = RealmCharacter.exalts.get((int) p.objType);
         if (exalts == null) return;
-        int[] update = new int[]{p.dexterityProgress, p.speedProgress, p.vitalityProgress, p.wisdomProgress, p.defenseProgress, p.attackProgress, p.manaProgress, p.healthProgress};
+        int[] update = new int[] {
+            p.dexterityProgress,
+            p.speedProgress,
+            p.vitalityProgress,
+            p.wisdomProgress,
+            p.defenseProgress,
+            p.attackProgress,
+            p.manaProgress,
+            p.healthProgress,
+        };
         if (!Arrays.equals(exalts, update)) {
             RealmCharacter.exalts.put((int) p.objType, update);
             CharacterExaltGUI.updateExalts();
@@ -628,20 +685,33 @@ public class TomatoData {
 
         pet.stat.get(StatType.SKIN_ID).statValue = currentChar.petSkin;
         pet.stat.get(StatType.PET_TYPE_STAT).statValue = currentChar.petType;
-        pet.stat.get(StatType.PET_NAME_STAT).stringStatValue = currentChar.petName;
-        pet.stat.get(StatType.PET_RARITY_STAT).statValue = currentChar.petRarity;
-        pet.stat.get(StatType.PET_INSTANCE_ID_STAT).statValue = currentChar.petInstanceId;
-        pet.stat.get(StatType.PET_MAX_ABILITY_POWER_STAT).statValue = currentChar.petMaxAbilityPower;
+        pet.stat.get(StatType.PET_NAME_STAT).stringStatValue =
+            currentChar.petName;
+        pet.stat.get(StatType.PET_RARITY_STAT).statValue =
+            currentChar.petRarity;
+        pet.stat.get(StatType.PET_INSTANCE_ID_STAT).statValue =
+            currentChar.petInstanceId;
+        pet.stat.get(StatType.PET_MAX_ABILITY_POWER_STAT).statValue =
+            currentChar.petMaxAbilityPower;
 
-        pet.stat.get(StatType.PET_FIRST_ABILITY_POINT_STAT).statValue = currentChar.petAbilitys[0];
-        pet.stat.get(StatType.PET_FIRST_ABILITY_POWER_STAT).statValue = currentChar.petAbilitys[1];
-        pet.stat.get(StatType.PET_FIRST_ABILITY_TYPE_STAT).statValue = currentChar.petAbilitys[2];
-        pet.stat.get(StatType.PET_SECOND_ABILITY_POINT_STAT).statValue = currentChar.petAbilitys[3];
-        pet.stat.get(StatType.PET_SECOND_ABILITY_POWER_STAT).statValue = currentChar.petAbilitys[4];
-        pet.stat.get(StatType.PET_SECOND_ABILITY_TYPE_STAT).statValue = currentChar.petAbilitys[5];
-        pet.stat.get(StatType.PET_THIRD_ABILITY_POINT_STAT).statValue = currentChar.petAbilitys[6];
-        pet.stat.get(StatType.PET_THIRD_ABILITY_POWER_STAT).statValue = currentChar.petAbilitys[7];
-        pet.stat.get(StatType.PET_THIRD_ABILITY_TYPE_STAT).statValue = currentChar.petAbilitys[8];
+        pet.stat.get(StatType.PET_FIRST_ABILITY_POINT_STAT).statValue =
+            currentChar.petAbilitys[0];
+        pet.stat.get(StatType.PET_FIRST_ABILITY_POWER_STAT).statValue =
+            currentChar.petAbilitys[1];
+        pet.stat.get(StatType.PET_FIRST_ABILITY_TYPE_STAT).statValue =
+            currentChar.petAbilitys[2];
+        pet.stat.get(StatType.PET_SECOND_ABILITY_POINT_STAT).statValue =
+            currentChar.petAbilitys[3];
+        pet.stat.get(StatType.PET_SECOND_ABILITY_POWER_STAT).statValue =
+            currentChar.petAbilitys[4];
+        pet.stat.get(StatType.PET_SECOND_ABILITY_TYPE_STAT).statValue =
+            currentChar.petAbilitys[5];
+        pet.stat.get(StatType.PET_THIRD_ABILITY_POINT_STAT).statValue =
+            currentChar.petAbilitys[6];
+        pet.stat.get(StatType.PET_THIRD_ABILITY_POWER_STAT).statValue =
+            currentChar.petAbilitys[7];
+        pet.stat.get(StatType.PET_THIRD_ABILITY_TYPE_STAT).statValue =
+            currentChar.petAbilitys[8];
     }
 
     /**
@@ -654,7 +724,9 @@ public class TomatoData {
     public void charListHttpRequest() {
         try {
             String httpString = HttpCharListRequest.getChartList(token);
-            ArrayList<RealmCharacter> charList = RealmCharacter.getCharList(httpString);
+            ArrayList<RealmCharacter> charList = RealmCharacter.getCharList(
+                httpString
+            );
             if (charList != null) characterListUpdate(charList);
         } catch (IOException e) {
             e.printStackTrace();
@@ -692,7 +764,11 @@ public class TomatoData {
      * @param p Text info.
      */
     public void text(TextPacket p) {
-        if (p.text.equals("I SAID DO NOT INTERRUPT ME! For this I shall hasten your end!")) {
+        if (
+            p.text.equals(
+                "I SAID DO NOT INTERRUPT ME! For this I shall hasten your end!"
+            )
+        ) {
             Entity e = entityList.get(p.objectId);
             if (e != null) {
                 e.dammahCountered = true;
@@ -739,6 +815,15 @@ public class TomatoData {
     }
 
     /**
+     * Gets the current character ID.
+     *
+     * @return Current character ID, or -1 if no character is loaded.
+     */
+    public int getCharId() {
+        return charId;
+    }
+
+    /**
      * Gets the number of flames from moonlight village boss phases
      *
      * @return Moonlight village boss flames
@@ -761,6 +846,7 @@ public class TomatoData {
     public void setIdEntityPing(ArrayList<Integer> a) {
         idEntityPing = a;
     }
+
     public ArrayList<Integer> getEntityIdPings() {
         return idEntityPing;
     }

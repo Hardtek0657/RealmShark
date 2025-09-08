@@ -1,11 +1,12 @@
 package tomato.gui.stats;
 
-import javax.swing.*;
 import java.awt.*;
 import java.util.ArrayList;
 import java.util.HashMap;
+import javax.swing.*;
 
 public class FameTrackerGUI extends JPanel {
+
     private static FameTrackerGUI INSTANCE;
 
     private final ArrayList<Fame> scores;
@@ -21,11 +22,11 @@ public class FameTrackerGUI extends JPanel {
 
         graphPanel = new GraphPanel(scores);
 
-//        JButton button = new JButton("Test");
-//        button.addActionListener(e -> {
-//            buttonLol();
-//        });
-//        add(button, BorderLayout.SOUTH);
+        //        JButton button = new JButton("Test");
+        //        button.addActionListener(e -> {
+        //            buttonLol();
+        //        });
+        //        add(button, BorderLayout.SOUTH);
 
         add(graphPanel);
     }
@@ -39,8 +40,10 @@ public class FameTrackerGUI extends JPanel {
     }
 
     private void update(int charId, long fame, long time) {
-//        scores.add((double) exp);
-        fameList.computeIfAbsent(charId, e -> new ArrayList<>()).add(new Fame(fame, time));
+        //        scores.add((double) exp);
+        fameList
+            .computeIfAbsent(charId, e -> new ArrayList<>())
+            .add(new Fame(fame, time));
         graphPanel.setScores(fameList.get(charId));
         graphPanel.repaint();
     }
