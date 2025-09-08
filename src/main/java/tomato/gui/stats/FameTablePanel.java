@@ -11,9 +11,12 @@ import tomato.backend.data.TomatoData;
 import tomato.gui.stats.data.MapFameData;
 import tomato.gui.stats.session.FameSessionManager;
 import tomato.gui.stats.session.FameSessionViewer;
+import tomato.gui.stats.utils.BaseStatsPanel;
+import tomato.gui.stats.utils.FormatUtils;
+import tomato.gui.stats.utils.UIComponentUtils;
 import tomato.realmshark.RealmCharacter;
 
-public class FameTablePanel extends JPanel {
+public class FameTablePanel extends BaseStatsPanel {
 
     private final JTable fameTable;
     private final HashMap<Integer, ArrayList<MapFameData>> mapFameData;
@@ -35,6 +38,11 @@ public class FameTablePanel extends JPanel {
     public FameTablePanel(TomatoData tomatoData) {
         INSTANCE = this;
         this.tomatoData = tomatoData;
+        initializePanel();
+    }
+
+    @Override
+    protected void initializePanel() {
         setLayout(new BorderLayout());
         fameData = new HashMap<>();
         lastFameEntries = new HashMap<>();
@@ -74,6 +82,16 @@ public class FameTablePanel extends JPanel {
         JScrollPane scrollPane = new JScrollPane(fameTable);
         add(scrollPane, BorderLayout.CENTER);
 
+        setupFamePerHourRenderer();
+        setupButtonPanel();
+    }
+
+    @Override
+    protected void updateGUI() {
+        refreshPanel();
+    }
+
+    private void setupFamePerHourRenderer() {
         // Set custom cell renderer for Fame/Hour column to show tooltip
         fameTable
             .getColumnModel()
@@ -106,76 +124,9 @@ public class FameTablePanel extends JPanel {
                                 double famePerMinute = famePerHour / 60.0;
 
                                 // Get character ID from row data and find session start time
-                                int charId = -1;
-                                try {
-                                    String charName =
-                                        (String) tableModel.getValueAt(row, 0);
-                                    if (charName != null) {
-                                        if (charName.startsWith("Char ")) {
-                                            try {
-                                                charId = Integer.parseInt(
-                                                    charName.substring(5)
-                                                );
-                                            } catch (NumberFormatException e) {
-                                                // Ignore malformed IDs
-                                            }
-                                        } else {
-                                            // Look up charId by class name
-                                            for (Integer id : characterClassNames.keySet()) {
-                                                if (
-                                                    characterClassNames
-                                                        .get(id)
-                                                        .equals(charName)
-                                                ) {
-                                                    charId = id;
-                                                    break;
-                                                }
-                                            }
-                                        }
-                                    }
-                                } catch (Exception e) {
-                                    // Handle potential index out of bounds or other exceptions
-                                    charId = -1;
-                                }
+                                int charId = getCharacterIdFromRow(row);
 
-                                String tooltipText;
-                                try {
-                                    if (charId != -1) {
-                                        Long sessionStart =
-                                            sessionStartTime.get(charId);
-                                        if (sessionStart != null) {
-                                            java.util.Date startDate =
-                                                new java.util.Date(
-                                                    sessionStart
-                                                );
-                                            java.text.SimpleDateFormat sdf =
-                                                new java.text.SimpleDateFormat(
-                                                    "yyyy-MM-dd HH:mm:ss"
-                                                );
-                                            tooltipText = String.format(
-                                                "Fame per minute: %.2f | Session started: %s",
-                                                famePerMinute,
-                                                sdf.format(startDate)
-                                            );
-                                        } else {
-                                            tooltipText = String.format(
-                                                "Fame per minute: %.2f | Session start: N/A",
-                                                famePerMinute
-                                            );
-                                        }
-                                    } else {
-                                        tooltipText = String.format(
-                                            "Fame per minute: %.2f | Session start: Unknown character",
-                                            famePerMinute
-                                        );
-                                    }
-                                } catch (Exception e) {
-                                    tooltipText = String.format(
-                                        "Fame per minute: %.2f | Session start: Error",
-                                        famePerMinute
-                                    );
-                                }
-
+                                String tooltipText = createTooltipText(famePerMinute, charId);
                                 setToolTipText(tooltipText);
                             } catch (NumberFormatException e) {
                                 setToolTipText(
@@ -192,11 +143,11 @@ public class FameTablePanel extends JPanel {
                     }
                 }
             );
+    }
 
-        // Add some instructions
+    private void setupButtonPanel() {
         // Add reset button panel
-        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 5, 5));
-        buttonPanel.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5));
+        JPanel buttonPanel = UIComponentUtils.createButtonPanel();
 
         JButton resetButton = new JButton("Reset Session");
         resetButton.addActionListener(e -> resetAllSessionsAndClearFile());
@@ -210,7 +161,7 @@ public class FameTablePanel extends JPanel {
         viewSessionsButton.addActionListener(e -> viewSavedSessions());
         buttonPanel.add(viewSessionsButton);
 
-        infoLabel = new JLabel(
+        infoLabel = UIComponentUtils.createStandardLabel(
             "Enter Daily Quest Room to load char data | Fame tracking - updates automatically when fame changes"
         );
         infoLabel.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5));
@@ -219,6 +170,63 @@ public class FameTablePanel extends JPanel {
         southPanel.add(buttonPanel, BorderLayout.NORTH);
         southPanel.add(infoLabel, BorderLayout.SOUTH);
         add(southPanel, BorderLayout.SOUTH);
+    }
+
+    private int getCharacterIdFromRow(int row) {
+        try {
+            String charName = (String) tableModel.getValueAt(row, 0);
+            if (charName != null) {
+                if (charName.startsWith("Char ")) {
+                    try {
+                        return Integer.parseInt(charName.substring(5));
+                    } catch (NumberFormatException e) {
+                        // Ignore malformed IDs
+                    }
+                } else {
+                    // Look up charId by class name
+                    for (Integer id : characterClassNames.keySet()) {
+                        if (characterClassNames.get(id).equals(charName)) {
+                            return id;
+                        }
+                    }
+                }
+            }
+        } catch (Exception e) {
+            // Handle potential index out of bounds or other exceptions
+        }
+        return -1;
+    }
+
+    private String createTooltipText(double famePerMinute, int charId) {
+        try {
+            if (charId != -1) {
+                Long sessionStart = sessionStartTime.get(charId);
+                if (sessionStart != null) {
+                    String formattedTime = FormatUtils.formatSessionTime(sessionStart);
+                    return String.format(
+                        "Fame per minute: %.2f | Session started: %s",
+                        famePerMinute,
+                        formattedTime
+                    );
+                } else {
+                    return String.format(
+                        "Fame per minute: %.2f | Session start: N/A",
+                        famePerMinute
+                    );
+                }
+            } else {
+                return String.format(
+                    "Fame per minute: %.2f | Session start: Unknown character",
+                    famePerMinute
+                );
+            }
+        } catch (Exception e) {
+            return String.format(
+                "Fame per minute: %.2f | Session start: Error",
+                famePerMinute
+            );
+        }
+    }
     }
 
     /**
@@ -254,7 +262,7 @@ public class FameTablePanel extends JPanel {
             tomatoData.chars.isEmpty()
         ) {
             // Character data not loaded yet - show informative message
-            SwingUtilities.invokeLater(() -> {
+            safeUpdateGUI(() -> {
                 if (tableModel.getRowCount() == 0) {
                     infoLabel.setText(
                         "Enter Daily Quest Room to load character data | Fame tracking - updates automatically when fame changes"
@@ -264,7 +272,7 @@ public class FameTablePanel extends JPanel {
             return;
         }
 
-        SwingUtilities.invokeLater(() -> {
+        safeUpdateGUI(() -> {
             // Clear the initial message
             infoLabel.setText(
                 "Fame tracking - updates automatically when fame changes"
@@ -347,7 +355,7 @@ public class FameTablePanel extends JPanel {
     }
 
     public void updateFame(int charId, long fame, long time, String className) {
-        SwingUtilities.invokeLater(() -> {
+        safeUpdateGUI(() -> {
             // Check if character has changed
             if (charId != currentCharacterId && currentCharacterId != -1) {
                 // Character changed - reset fame/hour for previous character
@@ -461,19 +469,11 @@ public class FameTablePanel extends JPanel {
     }
 
     private String formatNumber(double number) {
-        // Display exact values for accuracy instead of truncated values
-        if (number == (long) number) {
-            // Integer value - display without decimals
-            return String.format("%d", (long) number);
-        } else {
-            // Decimal value - display with full precision
-            return String.valueOf(number);
-        }
+        return FormatUtils.formatNumber(number);
     }
 
     private String formatFamePerHour(double famePerHour) {
-        // Format fame/hour values with 2 decimal places for readability
-        return String.format("%.2f", famePerHour);
+        return FormatUtils.formatFamePerHour(famePerHour);
     }
 
     private void resetAllSessions() {
@@ -542,7 +542,7 @@ public class FameTablePanel extends JPanel {
 
     // Method to detect character changes from TomatoData updates
     public void checkForCharacterChange() {
-        SwingUtilities.invokeLater(() -> {
+        safeUpdateGUI(() -> {
             if (tomatoData != null && tomatoData.getCharId() != -1) {
                 if (
                     tomatoData.getCharId() != currentCharacterId &&

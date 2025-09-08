@@ -8,6 +8,7 @@ import java.util.List;
 import javax.swing.BorderFactory;
 import javax.swing.JButton;
 import javax.swing.JPanel;
+import tomato.gui.stats.utils.UIComponentUtils;
 
 public class GraphPanel extends JPanel implements MouseMotionListener {
 
@@ -391,33 +392,14 @@ public class GraphPanel extends JPanel implements MouseMotionListener {
     }
 
     public JPanel createTimeRangeButtons() {
-        buttonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 5, 5));
-        buttonPanel.setOpaque(false);
-        buttonPanel.setBorder(BorderFactory.createEmptyBorder(5, 5, 10, 5));
+        buttonPanel = UIComponentUtils.createTimeRangeButtonPanel();
 
-        btn1Min = new JButton("1 min");
-        btn5Min = new JButton("5 min");
-        btn10Min = new JButton("10 min");
-        btn20Min = new JButton("20 min");
-        btn30Min = new JButton("30 min");
-        btnAll = new JButton("All");
-
-        // Style buttons
-        Font buttonFont = new Font("Arial", Font.PLAIN, 10);
-        Dimension buttonSize = new Dimension(70, 20);
-
-        btn1Min.setFont(buttonFont);
-        btn1Min.setPreferredSize(buttonSize);
-        btn5Min.setFont(buttonFont);
-        btn5Min.setPreferredSize(buttonSize);
-        btn10Min.setFont(buttonFont);
-        btn10Min.setPreferredSize(buttonSize);
-        btn20Min.setFont(buttonFont);
-        btn20Min.setPreferredSize(buttonSize);
-        btn30Min.setFont(buttonFont);
-        btn30Min.setPreferredSize(buttonSize);
-        btnAll.setFont(buttonFont);
-        btnAll.setPreferredSize(buttonSize);
+        btn1Min = UIComponentUtils.createStandardButton("1 min");
+        btn5Min = UIComponentUtils.createStandardButton("5 min");
+        btn10Min = UIComponentUtils.createStandardButton("10 min");
+        btn20Min = UIComponentUtils.createStandardButton("20 min");
+        btn30Min = UIComponentUtils.createStandardButton("30 min");
+        btnAll = UIComponentUtils.createStandardButton("All");
 
         // Add action listeners
         btn1Min.addActionListener(e -> filterData(1 * 60 * 1000L));
