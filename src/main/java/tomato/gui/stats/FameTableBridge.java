@@ -1,29 +1,55 @@
 package tomato.gui.stats;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import tomato.gui.stats.session.FameSession;
-import tomato.gui.stats.session.FameSessionManager;
-
+/**
+ * A simple bridge for wiring FameTablePanel and FameTrackerGUI together.
+ * This class intentionally contains no extra state; it just forwards updates and
+ * exposes a few helper actions to the other components.
+ */
 public class FameTableBridge {
 
     private static FameTableBridge INSTANCE;
+
     private FameTablePanel fameTablePanel;
     private FameTrackerGUI fameTrackerGUI;
-    private final HashMap<Integer, ArrayList<Fame>> fameList;
 
-    // connects both fame views
+    // Connect both fame views
     public FameTableBridge() {
         INSTANCE = this;
-        fameList = new HashMap<>();
     }
 
+    /**
+     * Initialize the singleton instance if not already created.
+     */
     public static void initialize() {
         if (INSTANCE == null) {
             INSTANCE = new FameTableBridge();
         }
     }
 
+    /**
+     * Get the bridge singleton.
+     */
+    public static FameTableBridge getInstance() {
+        return INSTANCE;
+    }
+
+    /**
+     * Register the table panel (receiver of fame updates).
+     */
+    public void setFameTablePanel(FameTablePanel panel) {
+        this.fameTablePanel = panel;
+    }
+
+    /**
+     * Register the tracker GUI (for auto-save, file operations, etc.).
+     */
+    public void setFameTrackerGUI(FameTrackerGUI gui) {
+        this.fameTrackerGUI = gui;
+    }
+
+    /**
+     * Forward a fame update to the FameTablePanel.
+     */
     public static void updateFame(
         int charId,
         long fame,
@@ -31,28 +57,12 @@ public class FameTableBridge {
         String className
     ) {
         if (INSTANCE != null && INSTANCE.fameTablePanel != null) {
-            INSTANCE.fameList
-                .computeIfAbsent(charId, e -> new ArrayList<>())
-                .add(new Fame(fame, time));
-
             INSTANCE.fameTablePanel.updateFame(charId, fame, time, className);
         }
     }
 
-    public void setFameTablePanel(FameTablePanel panel) {
-        this.fameTablePanel = panel;
-    }
-
-    public void setFameTrackerGUI(FameTrackerGUI gui) {
-        this.fameTrackerGUI = gui;
-    }
-
-    public static FameTableBridge getInstance() {
-        return INSTANCE;
-    }
-
     /**
-     * Trigger auto-save of the current live session
+     * Trigger auto-save of the current live session on the tracker GUI.
      */
     public void triggerAutoSave() {
         if (fameTrackerGUI != null) {
@@ -61,7 +71,7 @@ public class FameTableBridge {
     }
 
     /**
-     * Clear the current session file being written
+     * Clear the current session file being written and start fresh.
      */
     public void clearCurrentSessionFile() {
         if (fameTrackerGUI != null) {

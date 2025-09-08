@@ -5,12 +5,9 @@ import java.awt.event.MouseEvent;
 import java.awt.event.MouseMotionListener;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Random;
 import javax.swing.BorderFactory;
 import javax.swing.JButton;
-import javax.swing.JFrame;
 import javax.swing.JPanel;
-import javax.swing.SwingUtilities;
 
 public class GraphPanel extends JPanel implements MouseMotionListener {
 
@@ -391,32 +388,6 @@ public class GraphPanel extends JPanel implements MouseMotionListener {
             invalidate();
             this.repaint();
         }
-    }
-
-    private static void createAndShowGui() {
-        ArrayList<Fame> scores = new ArrayList<>();
-        Random random = new Random();
-        int maxDataPoints = 10;
-        int maxScore = 300000000;
-        int sumy = 0;
-        int sumx = 0;
-        for (int i = 0; i < maxDataPoints; i++) {
-            sumy += random.nextDouble() * maxScore;
-            sumx += random.nextDouble() * maxScore * 3;
-            scores.add(new Fame(sumx, sumy));
-        }
-        GraphPanel mainPanel = new GraphPanel(scores);
-        mainPanel.setPreferredSize(new Dimension(800, 600));
-        JFrame frame = new JFrame("DrawGraph");
-        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        frame.getContentPane().add(mainPanel);
-        frame.pack();
-        frame.setLocationRelativeTo(null);
-        frame.setVisible(true);
-    }
-
-    public static void main(String[] args) {
-        SwingUtilities.invokeLater(GraphPanel::createAndShowGui);
     }
 
     public JPanel createTimeRangeButtons() {

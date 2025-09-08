@@ -476,43 +476,6 @@ public class FameTablePanel extends JPanel {
         return String.format("%.2f", famePerHour);
     }
 
-    private void resetSelectedSession() {
-        int selectedRow = fameTable.getSelectedRow();
-        if (selectedRow >= 0) {
-            String charName = (String) tableModel.getValueAt(selectedRow, 0);
-            // Extract charId from the display name
-            int charId = -1;
-            if (charName.startsWith("Char ")) {
-                try {
-                    charId = Integer.parseInt(charName.substring(5));
-                } catch (NumberFormatException ex) {
-                    // Ignore malformed IDs
-                }
-            } else {
-                // Look up charId by class name
-                for (Integer id : characterClassNames.keySet()) {
-                    if (characterClassNames.get(id).equals(charName)) {
-                        charId = id;
-                        break;
-                    }
-                }
-            }
-
-            if (charId != -1) {
-                resetSession(charId);
-            }
-        }
-    }
-
-    private void resetSession(int charId) {
-        Fame lastEntry = lastFameEntries.get(charId);
-        if (lastEntry != null) {
-            sessionStartFame.put(charId, lastEntry.fame);
-            sessionStartTime.put(charId, lastEntry.time);
-            updateTableForCharacter(charId);
-        }
-    }
-
     private void resetAllSessions() {
         for (Integer charId : lastFameEntries.keySet()) {
             Fame lastEntry = lastFameEntries.get(charId);
@@ -541,33 +504,6 @@ public class FameTablePanel extends JPanel {
             System.err.println(
                 "Error clearing session file: " + e.getMessage()
             );
-        }
-    }
-
-    private void updateTableForCharacter(int charId) {
-        Fame lastEntry = lastFameEntries.get(charId);
-        if (lastEntry != null) {
-            String className = characterClassNames.getOrDefault(
-                charId,
-                "Char " + charId
-            );
-            for (int i = 0; i < tableModel.getRowCount(); i++) {
-                String rowCharId = (String) tableModel.getValueAt(i, 0);
-                if (rowCharId.equals(className)) {
-                    double sessionGain =
-                        lastEntry.fame - getSessionStartFame(charId);
-                    tableModel.setValueAt(formatNumber(sessionGain), i, 4);
-                    // Update initial fame column with session start fame
-                    tableModel.setValueAt(
-                        formatNumber(getSessionStartFame(charId)),
-                        i,
-                        1
-                    );
-                    // Reset fame/hour to 0 when session is reset
-                    tableModel.setValueAt(formatFamePerHour(0), i, 3);
-                    break;
-                }
-            }
         }
     }
 
@@ -817,29 +753,6 @@ public class FameTablePanel extends JPanel {
         // Show map fame dialog for selected character
         ArrayList<MapFameData> mapData = mapFameData.get(selectedCharId);
         showMapFameDialog(selectedCharId, mapData);
-    }
-
-    /**
-     * Extracts character ID from display name
-     */
-    private int extractCharIdFromName(String charName) {
-        int charId = -1;
-        if (charName.startsWith("Char ")) {
-            try {
-                charId = Integer.parseInt(charName.substring(5));
-            } catch (NumberFormatException ex) {
-                // Ignore malformed IDs
-            }
-        } else {
-            // Look up charId by class name
-            for (Integer id : characterClassNames.keySet()) {
-                if (characterClassNames.get(id).equals(charName)) {
-                    charId = id;
-                    break;
-                }
-            }
-        }
-        return charId;
     }
 
     /**
