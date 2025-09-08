@@ -58,6 +58,7 @@ public class LootGUI extends BaseStatsPanel {
         validate();
 
         JScrollPane scroll = UIComponentUtils.createStandardScrollPane(lootPanel);
+        new SmartScroller(scroll, 0);
         add(scroll, BorderLayout.CENTER);
     }
 

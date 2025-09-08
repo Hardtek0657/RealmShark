@@ -3,7 +3,6 @@ package tomato.gui.stats.utils;
 import javax.swing.*;
 import javax.swing.border.TitledBorder;
 import java.awt.*;
-import tomato.gui.SmartScroller;
 
 /**
  * Utility class for creating common UI components used across stats GUI panels.
@@ -17,12 +16,12 @@ public class UIComponentUtils {
     private static final Font DEFAULT_LABEL_FONT = new Font("Arial", Font.PLAIN, 12);
     
     /**
-     * Creates a standard scroll pane with SmartScroller for vertical scrolling.
+     * Creates a standard scroll pane for vertical scrolling.
+     * Note: SmartScroller should be added by the caller as it requires specific imports.
      */
     public static JScrollPane createStandardScrollPane(JComponent component) {
         JScrollPane scrollPane = new JScrollPane(component);
         scrollPane.getVerticalScrollBar().setUnitIncrement(40);
-        new SmartScroller(scrollPane, SmartScroller.VERTICAL, SmartScroller.END);
         return scrollPane;
     }
     

@@ -46,9 +46,11 @@ public class DungeonStats extends BaseStatsPanel {
         validate();
 
         JScrollPane scrollMid = UIComponentUtils.createStandardScrollPane(dungeonStatPanel);
+        new SmartScroller(scrollMid, 0);
         add(scrollMid, BorderLayout.CENTER);
 
         JScrollPane scrollRight = UIComponentUtils.createStandardScrollPane(radioPanel);
+        new SmartScroller(scrollRight, 0);
         add(scrollRight, BorderLayout.EAST);
     }
 
