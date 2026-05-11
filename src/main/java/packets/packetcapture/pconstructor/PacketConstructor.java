@@ -1,10 +1,16 @@
 package packets.packetcapture.pconstructor;
 
+import packets.Packet;
+import packets.PacketType;
 import packets.packetcapture.PacketProcessor;
 import packets.packetcapture.encryption.RC4;
 import packets.packetcapture.encryption.TickAligner;
+import packets.reader.BufferReader;
 
 import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Packet constructor sending the TCP packets to the stream constructor that in turn sends the
@@ -19,7 +25,12 @@ public class PacketConstructor {
     private final PacketProcessor packetProcessor;
     private final ROTMGPacketConstructor rotmgConst;
     private final TickAligner tickAligner;
-    private boolean firstNonLargePacket;
+    private final List<byte[]> pendingEncryptedPackets = new ArrayList<>();
+    private static final int MAX_PENDING_PACKET_BYTES = 2_000_000;
+    private int pendingPacketBytes;
+    private int pendingPayloadBytes;
+    private int firstSyncCandidatePayloadOffset = -1;
+    private int pendingMapInfoPackets;
 
     /**
      * Packet constructor with specific cipher.
@@ -40,11 +51,6 @@ public class PacketConstructor {
      * @param data Raw packet data incoming from the net tap.
      */
     public void build(byte[] data) {
-        if (firstNonLargePacket) {  // start listening after a non-max packet
-            // prevents errors in pSize.
-            if (data.length < 1460) firstNonLargePacket = false;
-            return;
-        }
         rotmgConst.build(data);
     }
 
@@ -58,18 +64,125 @@ public class PacketConstructor {
      */
     public void packetReceived(ByteBuffer encryptedData) {
         try {
+            byte[] encryptedPacket = encryptedData.array().clone();
             int size = encryptedData.getInt();
             int type = Byte.toUnsignedInt(encryptedData.get());
+            if (!tickAligner.isSynced() && !tickAligner.hasFirstSyncCandidate() && isSyncPacket(type)) {
+                firstSyncCandidatePayloadOffset = pendingPayloadBytes;
+            }
 
             boolean sync = tickAligner.checkRC4Alignment(encryptedData, size, type);
 
             if (sync) {
-                rc4Cipher.decrypt(5, encryptedData); // encryptedData is decrypted in this method
-                packetProcessor.processPackets(type, size, encryptedData);
+                processEncryptedPacket(encryptedPacket);
+            } else {
+                addPendingPacket(encryptedPacket, type);
+                if (tickAligner.isSynced()) {
+                    replayPendingPackets();
+                } else if (isSyncPacket(type) && !tickAligner.hasFirstSyncCandidate()) {
+                    firstSyncCandidatePayloadOffset = -1;
+                }
             }
         } catch (Exception e) {
             e.printStackTrace();
         }
+    }
+
+    private void addPendingPacket(byte[] encryptedPacket, int type) {
+        pendingEncryptedPackets.add(encryptedPacket);
+        pendingPacketBytes += encryptedPacket.length;
+        pendingPayloadBytes += encryptedPacket.length - 5;
+        if (type == PacketType.MAPINFO.getIndex()) {
+            pendingMapInfoPackets++;
+        }
+        if (pendingPacketBytes > MAX_PENDING_PACKET_BYTES) {
+            clearPendingPackets(false);
+        }
+    }
+
+    private void replayPendingPackets() {
+        int startOffset = tickAligner.getLastSyncOffset() - firstSyncCandidatePayloadOffset;
+        if (startOffset < 0) {
+            clearPendingPackets(false);
+            return;
+        }
+
+        rc4Cipher.reset();
+        rc4Cipher.skip(startOffset);
+        List<byte[]> packets = new ArrayList<>(pendingEncryptedPackets);
+        clearPendingPackets(false);
+
+        for (byte[] packet : packets) {
+            processEncryptedPacket(packet);
+        }
+    }
+
+    private void processEncryptedPacket(byte[] encryptedPacket) {
+        ByteBuffer packetData = ByteBuffer.wrap(encryptedPacket).order(ByteOrder.BIG_ENDIAN);
+        int size = packetData.getInt();
+        int type = Byte.toUnsignedInt(packetData.get());
+        rc4Cipher.decrypt(5, packetData);
+        packetProcessor.processPackets(type, size, packetData);
+    }
+
+    private boolean recoverPendingMapInfoFromSessionStart() {
+        boolean recovered = false;
+        for (byte[] encryptedPacket : pendingEncryptedPackets) {
+            ByteBuffer header = ByteBuffer.wrap(encryptedPacket).order(ByteOrder.BIG_ENDIAN);
+            int type = Byte.toUnsignedInt(header.get(4));
+            if (type != PacketType.MAPINFO.getIndex()) {
+                continue;
+            }
+
+            byte[] decryptedPacket = encryptedPacket.clone();
+            RC4 probe = rc4Cipher.fork();
+            probe.reset();
+            probe.decrypt(5, decryptedPacket);
+
+            if (!isValidMapInfoPacket(decryptedPacket)) {
+                continue;
+            }
+
+            ByteBuffer packetData = ByteBuffer.wrap(decryptedPacket).order(ByteOrder.BIG_ENDIAN);
+            int recoveredSize = packetData.getInt();
+            int recoveredType = Byte.toUnsignedInt(packetData.get());
+            packetProcessor.processPackets(recoveredType, recoveredSize, packetData);
+            recovered = true;
+        }
+        return recovered;
+    }
+
+    private boolean isValidMapInfoPacket(byte[] decryptedPacket) {
+        try {
+            ByteBuffer packetData = ByteBuffer.wrap(decryptedPacket).order(ByteOrder.BIG_ENDIAN);
+            packetData.getInt();
+            int type = Byte.toUnsignedInt(packetData.get());
+            if (type != PacketType.MAPINFO.getIndex()) {
+                return false;
+            }
+
+            Packet packet = PacketType.getPacket(type).factory();
+            packet.deserialize(new BufferReader(packetData));
+            return packetData.position() == packetData.capacity();
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    private boolean isSyncPacket(int type) {
+        return type == PacketType.NEWTICK.getIndex() || type == PacketType.MOVE.getIndex();
+    }
+
+    private void clearPendingPackets(boolean recoverMapInfo) {
+        if (recoverMapInfo && pendingMapInfoPackets > 0) {
+            recoverPendingMapInfoFromSessionStart();
+        }
+
+        pendingEncryptedPackets.clear();
+        pendingPacketBytes = 0;
+        pendingPayloadBytes = 0;
+        firstSyncCandidatePayloadOffset = -1;
+        pendingMapInfoPackets = 0;
     }
 
     /**
@@ -79,6 +192,7 @@ public class PacketConstructor {
         rc4Cipher.reset();
         tickAligner.reset();
         rotmgConst.reset();
+        clearPendingPackets(true);
     }
 
     /**
@@ -89,6 +203,6 @@ public class PacketConstructor {
      * resulting in a de-sync.
      */
     public void startResets() {
-        firstNonLargePacket = true;
+        reset();
     }
 }
