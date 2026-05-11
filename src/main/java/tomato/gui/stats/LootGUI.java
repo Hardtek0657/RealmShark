@@ -32,7 +32,6 @@ public class LootGUI extends JPanel {
     private static Font mainFont;
 
     private static int lootDrops;
-    private boolean disableLootSharing = false;
     public static boolean filterWhiteBag = false;
     public static boolean filterOrangeBag = false;
     public static boolean filterRedBag = false;
@@ -106,10 +105,6 @@ public class LootGUI extends JPanel {
         if (Sound.playGoldBagSound && isGoldBag(bag)) Sound.goldbag.play();
         if (Sound.playEggBagSound && isEggBag(bag)) Sound.eggbag.play();
         if (Sound.playBlueBagSound && isBlueBag(bag)) Sound.bluebag.play();
-
-        if (!disableLootSharing) {
-            SendLoot.sendLoot(data, map, bag, dropper, player, time);
-        }
 
         safeRefreshPanel();
     }
@@ -592,10 +587,6 @@ public class LootGUI extends JPanel {
         if (INSTANCE != null) {
             INSTANCE.handleFontUpdate(font);
         }
-    }
-
-    public static void lootSharing(boolean b) {
-        INSTANCE.disableLootSharing = b;
     }
 
     private static String time() {

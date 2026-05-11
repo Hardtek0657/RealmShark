@@ -41,14 +41,14 @@ public class Player {
     public int[] statMissing() {
         Entity player = this.playerEntity;
         int[] stats = new int[8];
-        stats[0] = (int) Math.ceil((CharacterClass.getLife(player.objectType) - player.baseStats[0]) / 5.0);
-        stats[1] = (int) Math.ceil((CharacterClass.getMana(player.objectType) - player.baseStats[1]) / 5.0);
-        stats[2] = CharacterClass.getAtk(player.objectType) - player.baseStats[2];
-        stats[3] = CharacterClass.getDef(player.objectType) - player.baseStats[3];
-        stats[4] = CharacterClass.getSpd(player.objectType) - player.baseStats[4];
-        stats[5] = CharacterClass.getDex(player.objectType) - player.baseStats[5];
-        stats[6] = CharacterClass.getVit(player.objectType) - player.baseStats[6];
-        stats[7] = CharacterClass.getWis(player.objectType) - player.baseStats[7];
+        stats[0] = Math.max(0, (int) Math.ceil((CharacterClass.getLife(player.objectType) - player.baseStats[0]) / 5.0));
+        stats[1] = Math.max(0, (int) Math.ceil((CharacterClass.getMana(player.objectType) - player.baseStats[1]) / 5.0));
+        stats[2] = Math.max(0, CharacterClass.getAtk(player.objectType) - player.baseStats[2]);
+        stats[3] = Math.max(0, CharacterClass.getDef(player.objectType) - player.baseStats[3]);
+        stats[4] = Math.max(0, CharacterClass.getSpd(player.objectType) - player.baseStats[4]);
+        stats[5] = Math.max(0, CharacterClass.getDex(player.objectType) - player.baseStats[5]);
+        stats[6] = Math.max(0, CharacterClass.getVit(player.objectType) - player.baseStats[6]);
+        stats[7] = Math.max(0, CharacterClass.getWis(player.objectType) - player.baseStats[7]);
 
         return stats;
     }

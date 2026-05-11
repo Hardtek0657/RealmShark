@@ -121,6 +121,10 @@ public class TomatoData {
     }
 
     public void webRequest() {
+        if (map == null) {
+            return;
+        }
+
         if (map.displayName.equals("Pet Yard")) {
             petyard = true;
             CharacterPetsGUI.clearPets();
@@ -171,7 +175,9 @@ public class TomatoData {
     public void setTime(long serverRealTimeMS) {
         time = serverRealTimeMS;
         timePc = System.currentTimeMillis();
-        if (timePcFirst == -1) timePcFirst = timePc;
+        if (timePcFirst == -1) {
+            timePcFirst = timePc;
+        }
     }
 
     /**
@@ -299,10 +305,6 @@ public class TomatoData {
             try {
                 // First pass: determine mob associations and collect results (do not send yet)
                 lootAttribution.beginLootTick(map != null ? map.seed : -1);
-                tomato.realmshark.SendLoot.beginLootTick(
-                    map != null ? map.seed : -1
-                );
-
                 ArrayList<Entity> processedBags = new ArrayList<>();
 
                 ArrayList<Entity> processedDroppers = new ArrayList<>();
@@ -319,10 +321,7 @@ public class TomatoData {
                     processedDroppers.add(mob);
                 }
 
-                // Apply any per-tick overrides (e.g., HM/TR variants) after all fabricated attributions are known
-                lootAttribution.applyPerTickOverrides();
-
-                // Second pass: update stats + GUI + SendLoot (SendLoot invoked inside LootGUI)
+                // Second pass: update stats and GUI.
 
                 for (int i = 0; i < processedBags.size(); i++) {
                     Entity bag = processedBags.get(i);
@@ -1307,16 +1306,9 @@ public class TomatoData {
         // --- State for attribution windows ---
         private int nextTickAttributionMobId = -1; // -1 = no attribution pending
 
-        private String forcedVariantSuffix = null; // if non-null, force variant suffix (e.g., HM/TR) during the attribution window
-
         private int nextTickAttributionSeed = -1; // map.seed at time of trigger to prevent cross-instance carryover
 
         private int remainingAttributionTicks = 0; // number of loot ticks still allowed to attribute (e.g. 2 for Goddess of Revelry)
-
-        // --- Per-tick bookkeeping ---
-        private int currentTickSeed = -1;
-        private final ArrayList<Entity> fabricatedAttributions =
-            new ArrayList<>();
 
         // Handle TextPacket triggers that open attribution windows
 
@@ -1327,7 +1319,7 @@ public class TomatoData {
                 "#Kitsune Umi".equals(p.name) &&
                 "This fully concludes the Moonlight Festival!".equals(p.text)
             ) {
-                openWindow(UMI_KITSUNE_ID, seed, 2, null);
+                openWindow(UMI_KITSUNE_ID, seed, 2);
                 return;
             }
 
@@ -1337,7 +1329,7 @@ public class TomatoData {
                 "#Dancer Miko".equals(p.name) &&
                 "Thank you all for coming tonight.".equals(p.text)
             ) {
-                openWindow(MIKO_DANCER_ID, seed, 2, null);
+                openWindow(MIKO_DANCER_ID, seed, 2);
                 return;
             }
 
@@ -1347,7 +1339,7 @@ public class TomatoData {
                 "#Umi, Goddess of Revelry".equals(p.name) &&
                 "This fully concludes the Moonlight Festival.".equals(p.text)
             ) {
-                openWindow(UMI_KITSUNE_ID, seed, 2, "TR"); // initial + delayed bag
+                openWindow(UMI_KITSUNE_ID, seed, 2); // initial + delayed bag
                 return;
             }
 
@@ -1359,7 +1351,7 @@ public class TomatoData {
                     p.text
                 )
             ) {
-                openWindow(VOID_ENTITY_ID, seed, 2, null);
+                openWindow(VOID_ENTITY_ID, seed, 2);
                 return;
             }
 
@@ -1369,7 +1361,7 @@ public class TomatoData {
                 "#The Bridge Sentinel".equals(p.name) &&
                 "I tried to protect you... I have failed.".equals(p.text)
             ) {
-                openWindow(BRIDGE_SENTINEL_ID, seed, 2, null); // initial + delayed bag
+                openWindow(BRIDGE_SENTINEL_ID, seed, 2); // initial + delayed bag
                 return;
             }
 
@@ -1379,7 +1371,7 @@ public class TomatoData {
                     p.text
                 )
             ) {
-                openWindow(BRIDGE_SENTINEL_ID, seed, 2, "HM"); // initial + delayed bag
+                openWindow(BRIDGE_SENTINEL_ID, seed, 2); // initial + delayed bag
                 return;
             }
 
@@ -1391,7 +1383,7 @@ public class TomatoData {
                     p.text
                 )
             ) {
-                openWindow(TWILIGHT_ARCHMAGE_ID, seed, 2, null); // initial + delayed bag
+                openWindow(TWILIGHT_ARCHMAGE_ID, seed, 2); // initial + delayed bag
                 return;
             }
 
@@ -1401,7 +1393,7 @@ public class TomatoData {
                     p.text
                 )
             ) {
-                openWindow(TWILIGHT_ARCHMAGE_ID, seed, 2, "HM"); // initial + delayed bag
+                openWindow(TWILIGHT_ARCHMAGE_ID, seed, 2); // initial + delayed bag
                 return;
             }
 
@@ -1413,7 +1405,7 @@ public class TomatoData {
                     p.text
                 )
             ) {
-                openWindow(ACCURSED_KING_ID, seed, 2, null); // initial + delayed bag
+                openWindow(ACCURSED_KING_ID, seed, 2); // initial + delayed bag
                 return;
             }
 
@@ -1421,32 +1413,24 @@ public class TomatoData {
                 "#King Azamoth".equals(p.name) &&
                 "This fate is mine to bear... not hers.".equals(p.text)
             ) {
-                openWindow(ACCURSED_KING_ID, seed, 2, "HM"); // initial + delayed bag
+                openWindow(ACCURSED_KING_ID, seed, 2); // initial + delayed bag
                 return;
             }
         }
 
         // Open an attribution window (generic)
 
-        private void openWindow(
-            int mobId,
-            int seed,
-            int ticks,
-            String forcedVariantSuffix
-        ) {
+        private void openWindow(int mobId, int seed, int ticks) {
             nextTickAttributionMobId = mobId;
 
             nextTickAttributionSeed = seed;
 
-            this.forcedVariantSuffix = forcedVariantSuffix;
             remainingAttributionTicks = ticks;
         }
 
-        // Begin a loot tick (reset per-tick structures)
+        // Begin a loot tick.
 
         void beginLootTick(int currentSeed) {
-            this.currentTickSeed = currentSeed;
-            fabricatedAttributions.clear();
         }
 
         // Determine attribution for a single bag
@@ -1483,30 +1467,9 @@ public class TomatoData {
                 ); // ephemeral fabricated entity
                 attribution.objectType = nextTickAttributionMobId;
                 mob = attribution;
-                fabricatedAttributions.add(attribution);
             }
 
             return mob;
-        }
-
-        // Apply HM/TR overrides after we know how many fabricated attributions occurred this tick
-        void applyPerTickOverrides() {
-            if (fabricatedAttributions.isEmpty()) return;
-
-            if (forcedVariantSuffix != null && !forcedVariantSuffix.isEmpty()) {
-                for (Entity f : fabricatedAttributions) {
-                    f.lootMobIdOverride =
-                        String.valueOf(f.objectType) + forcedVariantSuffix;
-                }
-            } else if (fabricatedAttributions.size() > 1) {
-                for (Entity f : fabricatedAttributions) {
-                    if (f.objectType == UMI_KITSUNE_ID) {
-                        f.lootMobIdOverride = "20493HM";
-                    } else if (f.objectType == MIKO_DANCER_ID) {
-                        f.lootMobIdOverride = "20451HM";
-                    }
-                }
-            }
         }
 
         // End-of-tick housekeeping (decrement and possibly reset attribution window)
@@ -1518,7 +1481,6 @@ public class TomatoData {
             if (remainingAttributionTicks == 0) {
                 nextTickAttributionMobId = -1;
 
-                forcedVariantSuffix = null;
                 nextTickAttributionSeed = -1;
             }
         }

@@ -638,7 +638,6 @@ public class ParseEnchants {
     }
 
     /**
-     * Public convenience method naming consistent with prospective SendLoot integration.
      * Returns total Loot Bonus percent (additive) from all provided encoded enchant strings.
      */
     public static float getTotalLootBonusPercent(String[] codes) {

@@ -155,7 +155,8 @@ public class CharacterClass {
      * @return Class name
      */
     public static String getName(int id) {
-        return CLASS_NAME.get(id);
+        String name = CLASS_NAME.get(id);
+        return name != null ? name : "Unknown (" + id + ")";
     }
 
     /**
@@ -166,7 +167,8 @@ public class CharacterClass {
      * @return Class max stat array
      */
     public static int[] getStats(int id) {
-        return CLASS_MAX_STATS.get(id);
+        int[] stats = CLASS_MAX_STATS.get(id);
+        return stats != null ? stats : new int[8];
     }
 
     /**
@@ -176,7 +178,8 @@ public class CharacterClass {
      * @return Class max stat
      */
     public static int getLife(int id) {
-        return CHARACTER_CLASS.get(id).life;
+        CharacterClass characterClass = CHARACTER_CLASS.get(id);
+        return characterClass != null ? characterClass.life : 0;
     }
 
     /**
@@ -196,35 +199,43 @@ public class CharacterClass {
      * @return int[] of classes sharing same weapons.
      */
     public static int[] weaponClasses(int classId) {
-        return WEAPON_CLASSES.get(classId);
+        int[] weaponClasses = WEAPON_CLASSES.get(classId);
+        return weaponClasses != null ? weaponClasses : new int[0];
     }
 
     public static int getMana(int id) {
-        return CHARACTER_CLASS.get(id).mana;
+        CharacterClass characterClass = CHARACTER_CLASS.get(id);
+        return characterClass != null ? characterClass.mana : 0;
     }
 
     public static int getAtk(int id) {
-        return CHARACTER_CLASS.get(id).atk;
+        CharacterClass characterClass = CHARACTER_CLASS.get(id);
+        return characterClass != null ? characterClass.atk : 0;
     }
 
     public static int getDef(int id) {
-        return CHARACTER_CLASS.get(id).def;
+        CharacterClass characterClass = CHARACTER_CLASS.get(id);
+        return characterClass != null ? characterClass.def : 0;
     }
 
     public static int getSpd(int id) {
-        return CHARACTER_CLASS.get(id).spd;
+        CharacterClass characterClass = CHARACTER_CLASS.get(id);
+        return characterClass != null ? characterClass.spd : 0;
     }
 
     public static int getDex(int id) {
-        return CHARACTER_CLASS.get(id).dex;
+        CharacterClass characterClass = CHARACTER_CLASS.get(id);
+        return characterClass != null ? characterClass.dex : 0;
     }
 
     public static int getVit(int id) {
-        return CHARACTER_CLASS.get(id).vit;
+        CharacterClass characterClass = CHARACTER_CLASS.get(id);
+        return characterClass != null ? characterClass.vit : 0;
     }
 
     public static int getWis(int id) {
-        return CHARACTER_CLASS.get(id).wis;
+        CharacterClass characterClass = CHARACTER_CLASS.get(id);
+        return characterClass != null ? characterClass.wis : 0;
     }
 
     public int getId() {

@@ -73,8 +73,8 @@ public class PacketRead {
             //                System.out.println(p.seed + "   " + ip);
             //            }
             //            types.clear();
-            System.out.println("clearconsole");
             System.out.println(((MapInfoPacket) packet).seed);
+            System.out.println("[FILTERED] " + packet);
             return;
         }
 
