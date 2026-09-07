@@ -20,6 +20,9 @@ import tomato.gui.myinfo.MyInfoGUI;
 import tomato.gui.security.ParsePanelGUI;
 import tomato.gui.stats.LootGUI;
 import tomato.realmshark.HttpCharListRequest;
+import tomato.realmshark.ParseDungeon;
+import tomato.realmshark.ParseEnchants;
+import tomato.realmshark.PingSounds;
 import tomato.realmshark.RealmCharacter;
 import tomato.realmshark.RealmCharacterStats;
 import tomato.realmshark.Sound;
@@ -121,10 +124,6 @@ public class TomatoData {
     }
 
     public void webRequest() {
-        if (map == null) {
-            return;
-        }
-
         if (map.displayName.equals("Pet Yard")) {
             petyard = true;
             CharacterPetsGUI.clearPets();
@@ -175,9 +174,7 @@ public class TomatoData {
     public void setTime(long serverRealTimeMS) {
         time = serverRealTimeMS;
         timePc = System.currentTimeMillis();
-        if (timePcFirst == -1) {
-            timePcFirst = timePc;
-        }
+        if (timePcFirst == -1) timePcFirst = timePc;
     }
 
     /**
@@ -254,6 +251,7 @@ public class TomatoData {
             moonLightFlameCounter(idType);
             SecurityAbilityUseCheck.decoy(entity);
             customSoundAlert(idType);
+            dungeonPingAlert(idType);
         }
         if (petyard) {
             addPet(object);
@@ -286,7 +284,7 @@ public class TomatoData {
         if (idEntityPing != null) {
             for (String id : idEntityPing) {
                 if (String.valueOf(idType).equals(id)) {
-                    Sound.custom.play();
+                    PingSounds.play(PingSounds.Type.ENTITY);
                     break;
                 }
             }
@@ -303,8 +301,9 @@ public class TomatoData {
 
         if (!lootTickContainer[lootTickToggle].isEmpty()) {
             try {
-                // First pass: determine mob associations and collect results (do not send yet)
+                // First pass: determine mob associations and collect results
                 lootAttribution.beginLootTick(map != null ? map.seed : -1);
+
                 ArrayList<Entity> processedBags = new ArrayList<>();
 
                 ArrayList<Entity> processedDroppers = new ArrayList<>();
@@ -321,7 +320,10 @@ public class TomatoData {
                     processedDroppers.add(mob);
                 }
 
-                // Second pass: update stats and GUI.
+                // Apply any per-tick overrides (e.g., HM/TR variants) after all fabricated attributions are known
+                lootAttribution.applyPerTickOverrides();
+
+                // Second pass: update stats + GUI
 
                 for (int i = 0; i < processedBags.size(); i++) {
                     Entity bag = processedBags.get(i);
@@ -1176,17 +1178,63 @@ public class TomatoData {
     }
 
     /**
-     * Checks if any enchant in the enchant text matches selected enchant pings
+     * Checks whether a dungeon is in the user's dungeon-ping selection.
+     *
+     * Selections are stored as dungeon NAMES rather than portal objectTypes,
+     * because several dungeons ship more than one portal variant and the user
+     * means "tell me when this dungeon drops", not "when this exact portal id
+     * appears".
+     *
+     * @param dungeonName Dungeon name resolved from a portal entity.
+     * @return True if the user wants a ping for this dungeon.
      */
-    public boolean isEnchantPing(String enchantText) {
-        if (enchantText == null || enchantText.isEmpty()) {
-            return false;
+    public boolean isDungeonPing(String dungeonName) {
+        if (dungeonName == null || dungeonName.isEmpty()) return false;
+
+        String saved = PropertiesManager.getProperty("dungeonPing.selected");
+        if (saved == null || saved.trim().isEmpty()) return false;
+
+        for (String s : saved.split(",")) {
+            if (dungeonName.equalsIgnoreCase(s.trim())) return true;
+        }
+        return false;
+    }
+
+    /**
+     * Plays the alert sound when a portal for a ping-selected dungeon appears.
+     *
+     * @param objectType objectType of a newly seen entity.
+     */
+    private void dungeonPingAlert(int objectType) {
+        String dungeonName = ParseDungeon.getDungeonNameByPortalType(objectType);
+        if (dungeonName == null) return; // not a portal
+        if (isDungeonPing(dungeonName)) {
+            PingSounds.play(PingSounds.Type.DUNGEON);
+        }
+    }
+
+    /**
+     * Returns the NAMES of every enchant on an item that matches the user's
+     * enchant-ping selection.
+     *
+     * Exists so the loot GUI can show which enchant actually triggered a ping,
+     * rather than only knowing that something did. Matching runs on the enchant
+     * type ids decoded from the item's raw enchant code - the selection is
+     * stored as ids too, so no display-string round trip is involved.
+     *
+     * @param enchantCode Raw encoded enchant string of one inventory slot.
+     * @return Matching enchant display names; empty if none match.
+     */
+    public ArrayList<String> getMatchedEnchantPings(String enchantCode) {
+        ArrayList<String> matched = new ArrayList<>();
+        if (enchantCode == null || enchantCode.isEmpty()) {
+            return matched;
         }
 
         // Load saved enchant ping selections
         String saved = PropertiesManager.getProperty("enchantPing.selected");
         if (saved == null || saved.trim().isEmpty()) {
-            return false;
+            return matched;
         }
 
         Set<Short> selectedEnchants = new HashSet<>();
@@ -1198,28 +1246,21 @@ public class TomatoData {
             } catch (NumberFormatException ignored) {}
         }
 
-        // Check each enchant line against selected enchants
-        // Format is "EnchantName(ID)" per line
-        String[] enchantLines = enchantText.split("\n");
-        for (String enchantLine : enchantLines) {
-            // Parse enchant ID from the line (format: "EnchantName(ID)")
-            if (enchantLine.contains("(") && enchantLine.contains(")")) {
-                try {
-                    int start = enchantLine.lastIndexOf("(") + 1;
-                    int end = enchantLine.lastIndexOf(")");
-                    String idStr = enchantLine.substring(start, end);
-                    short enchantId = Short.parseShort(idStr);
-                    if (selectedEnchants.contains(enchantId)) {
-                        return true;
-                    }
-                } catch (
-                    NumberFormatException
-                    | IndexOutOfBoundsException ignored
-                ) {}
+        for (Short enchantId : ParseEnchants.extractEnchantIds(enchantCode)) {
+            if (selectedEnchants.contains(enchantId)) {
+                String name = ParseEnchants.ENCHANTS.get(enchantId);
+                if (name != null && !name.isEmpty()) matched.add(name);
             }
         }
 
-        return false;
+        return matched;
+    }
+
+    /**
+     * Checks if any enchant in the enchant code matches selected enchant pings
+     */
+    public boolean isEnchantPing(String enchantCode) {
+        return !getMatchedEnchantPings(enchantCode).isEmpty();
     }
 
     /**
@@ -1306,9 +1347,16 @@ public class TomatoData {
         // --- State for attribution windows ---
         private int nextTickAttributionMobId = -1; // -1 = no attribution pending
 
+        private String forcedVariantSuffix = null; // if non-null, force variant suffix (e.g., HM/TR) during the attribution window
+
         private int nextTickAttributionSeed = -1; // map.seed at time of trigger to prevent cross-instance carryover
 
         private int remainingAttributionTicks = 0; // number of loot ticks still allowed to attribute (e.g. 2 for Goddess of Revelry)
+
+        // --- Per-tick bookkeeping ---
+        private int currentTickSeed = -1;
+        private final ArrayList<Entity> fabricatedAttributions =
+            new ArrayList<>();
 
         // Handle TextPacket triggers that open attribution windows
 
@@ -1319,7 +1367,7 @@ public class TomatoData {
                 "#Kitsune Umi".equals(p.name) &&
                 "This fully concludes the Moonlight Festival!".equals(p.text)
             ) {
-                openWindow(UMI_KITSUNE_ID, seed, 2);
+                openWindow(UMI_KITSUNE_ID, seed, 2, null);
                 return;
             }
 
@@ -1329,7 +1377,7 @@ public class TomatoData {
                 "#Dancer Miko".equals(p.name) &&
                 "Thank you all for coming tonight.".equals(p.text)
             ) {
-                openWindow(MIKO_DANCER_ID, seed, 2);
+                openWindow(MIKO_DANCER_ID, seed, 2, null);
                 return;
             }
 
@@ -1339,7 +1387,7 @@ public class TomatoData {
                 "#Umi, Goddess of Revelry".equals(p.name) &&
                 "This fully concludes the Moonlight Festival.".equals(p.text)
             ) {
-                openWindow(UMI_KITSUNE_ID, seed, 2); // initial + delayed bag
+                openWindow(UMI_KITSUNE_ID, seed, 2, "TR"); // initial + delayed bag
                 return;
             }
 
@@ -1351,7 +1399,7 @@ public class TomatoData {
                     p.text
                 )
             ) {
-                openWindow(VOID_ENTITY_ID, seed, 2);
+                openWindow(VOID_ENTITY_ID, seed, 2, null);
                 return;
             }
 
@@ -1361,7 +1409,7 @@ public class TomatoData {
                 "#The Bridge Sentinel".equals(p.name) &&
                 "I tried to protect you... I have failed.".equals(p.text)
             ) {
-                openWindow(BRIDGE_SENTINEL_ID, seed, 2); // initial + delayed bag
+                openWindow(BRIDGE_SENTINEL_ID, seed, 2, null); // initial + delayed bag
                 return;
             }
 
@@ -1371,7 +1419,7 @@ public class TomatoData {
                     p.text
                 )
             ) {
-                openWindow(BRIDGE_SENTINEL_ID, seed, 2); // initial + delayed bag
+                openWindow(BRIDGE_SENTINEL_ID, seed, 2, "HM"); // initial + delayed bag
                 return;
             }
 
@@ -1383,7 +1431,7 @@ public class TomatoData {
                     p.text
                 )
             ) {
-                openWindow(TWILIGHT_ARCHMAGE_ID, seed, 2); // initial + delayed bag
+                openWindow(TWILIGHT_ARCHMAGE_ID, seed, 2, null); // initial + delayed bag
                 return;
             }
 
@@ -1393,7 +1441,7 @@ public class TomatoData {
                     p.text
                 )
             ) {
-                openWindow(TWILIGHT_ARCHMAGE_ID, seed, 2); // initial + delayed bag
+                openWindow(TWILIGHT_ARCHMAGE_ID, seed, 2, "HM"); // initial + delayed bag
                 return;
             }
 
@@ -1405,7 +1453,7 @@ public class TomatoData {
                     p.text
                 )
             ) {
-                openWindow(ACCURSED_KING_ID, seed, 2); // initial + delayed bag
+                openWindow(ACCURSED_KING_ID, seed, 2, null); // initial + delayed bag
                 return;
             }
 
@@ -1413,24 +1461,32 @@ public class TomatoData {
                 "#King Azamoth".equals(p.name) &&
                 "This fate is mine to bear... not hers.".equals(p.text)
             ) {
-                openWindow(ACCURSED_KING_ID, seed, 2); // initial + delayed bag
+                openWindow(ACCURSED_KING_ID, seed, 2, "HM"); // initial + delayed bag
                 return;
             }
         }
 
         // Open an attribution window (generic)
 
-        private void openWindow(int mobId, int seed, int ticks) {
+        private void openWindow(
+            int mobId,
+            int seed,
+            int ticks,
+            String forcedVariantSuffix
+        ) {
             nextTickAttributionMobId = mobId;
 
             nextTickAttributionSeed = seed;
 
+            this.forcedVariantSuffix = forcedVariantSuffix;
             remainingAttributionTicks = ticks;
         }
 
-        // Begin a loot tick.
+        // Begin a loot tick (reset per-tick structures)
 
         void beginLootTick(int currentSeed) {
+            this.currentTickSeed = currentSeed;
+            fabricatedAttributions.clear();
         }
 
         // Determine attribution for a single bag
@@ -1467,9 +1523,30 @@ public class TomatoData {
                 ); // ephemeral fabricated entity
                 attribution.objectType = nextTickAttributionMobId;
                 mob = attribution;
+                fabricatedAttributions.add(attribution);
             }
 
             return mob;
+        }
+
+        // Apply HM/TR overrides after we know how many fabricated attributions occurred this tick
+        void applyPerTickOverrides() {
+            if (fabricatedAttributions.isEmpty()) return;
+
+            if (forcedVariantSuffix != null && !forcedVariantSuffix.isEmpty()) {
+                for (Entity f : fabricatedAttributions) {
+                    f.lootMobIdOverride =
+                        String.valueOf(f.objectType) + forcedVariantSuffix;
+                }
+            } else if (fabricatedAttributions.size() > 1) {
+                for (Entity f : fabricatedAttributions) {
+                    if (f.objectType == UMI_KITSUNE_ID) {
+                        f.lootMobIdOverride = "20493HM";
+                    } else if (f.objectType == MIKO_DANCER_ID) {
+                        f.lootMobIdOverride = "20451HM";
+                    }
+                }
+            }
         }
 
         // End-of-tick housekeeping (decrement and possibly reset attribution window)
@@ -1481,6 +1558,7 @@ public class TomatoData {
             if (remainingAttributionTicks == 0) {
                 nextTickAttributionMobId = -1;
 
+                forcedVariantSuffix = null;
                 nextTickAttributionSeed = -1;
             }
         }

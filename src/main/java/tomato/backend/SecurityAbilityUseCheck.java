@@ -38,10 +38,7 @@ public class SecurityAbilityUseCheck {
 
         for (Entity player : data.playerListUpdated.values()) {
             if (player.stasisCounter == data.time) continue;
-            StatData abilitySlot = player.stat.get(StatType.INVENTORY_1_STAT);
-            if (abilitySlot == null) continue;
-
-            int item = abilitySlot.statValue;
+            int item = player.stat.get(StatType.INVENTORY_1_STAT).statValue;
             if (StasisOrbs.usingOrb(item, stasisDuration)) {
                 player.stasisCounter = 2;
             }
@@ -56,19 +53,22 @@ public class SecurityAbilityUseCheck {
      */
     public static void checkManaFromStasis(Entity entity, StatData[] stats) {
         if (entity.stasisCounter > 0) {
-            StatData currentMp = entity.stat.get(StatType.MP_STAT);
-            StatData abilitySlot = entity.stat.get(StatType.INVENTORY_1_STAT);
-            if (currentMp == null || abilitySlot == null) return;
-
             entity.stasisCounter--;
             for (StatData sd : stats) {
                 if (sd.statType == StatType.MP_STAT) {
-                    if (currentMp.statValue <= sd.statValue) {
+                    if (
+                        entity.stat.get(StatType.MP_STAT).statValue <=
+                        sd.statValue
+                    ) {
                         StringBuilder sb = new StringBuilder();
                         sb.append("[").append(Util.getHourTime()).append("] ");
                         sb.append(entity.name()).append(": ");
                         sb.append(
-                            IdToAsset.objectName(abilitySlot.statValue)
+                            IdToAsset.objectName(
+                                entity.stat.get(
+                                    StatType.INVENTORY_1_STAT
+                                ).statValue
+                            )
                         );
                         SecurityGUI.updateAbilityUsage(sb.toString());
                     }
@@ -90,18 +90,21 @@ public class SecurityAbilityUseCheck {
         if (CharacterClass.isPlayerCharacter(entity.objectType)
                 && !CharacterClass.getName(entity.objectType).equals("Trickster")) return;
         if (decoyCounter == 0) {
-            StatData currentMp = entity.stat.get(StatType.MP_STAT);
-            StatData abilitySlot = entity.stat.get(StatType.INVENTORY_1_STAT);
-            if (currentMp == null || abilitySlot == null) return;
-
             for (StatData sd : stats) {
                 if (sd.statType == StatType.MP_STAT) {
-                    if (currentMp.statValue <= sd.statValue) {
+                    if (
+                        entity.stat.get(StatType.MP_STAT).statValue <=
+                        sd.statValue
+                    ) {
                         StringBuilder sb = new StringBuilder();
                         sb.append("[").append(Util.getHourTime()).append("] ");
                         sb.append(entity.name()).append(": ");
                         sb.append(
-                            IdToAsset.objectName(abilitySlot.statValue)
+                            IdToAsset.objectName(
+                                entity.stat.get(
+                                    StatType.INVENTORY_1_STAT
+                                ).statValue
+                            )
                         );
                         SecurityGUI.updateAbilityUsage(sb.toString());
                     }

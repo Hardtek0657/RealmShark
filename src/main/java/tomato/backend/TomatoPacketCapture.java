@@ -12,7 +12,6 @@ import tomato.backend.data.TomatoData;
 import tomato.gui.TomatoGUI;
 import tomato.gui.dps.DpsGUI;
 import tomato.gui.stats.FameTablePanel;
-import tomato.realmshark.CrashLogger;
 import tomato.realmshark.Sound;
 
 /**
@@ -30,21 +29,6 @@ public class TomatoPacketCapture implements Controller {
      * @param packet incoming packets to be processed.
      */
     public void packetCapture(Packet packet) {
-        try {
-            handlePacket(packet);
-        } catch (RuntimeException e) {
-            System.err.println(
-                "[Packet Handler] Failed while handling " +
-                    describePacket(packet) +
-                    " on map " +
-                    describeCurrentMap()
-            );
-            e.printStackTrace(System.err);
-            CrashLogger.printCrash(e);
-        }
-    }
-
-    private void handlePacket(Packet packet) {
         if (packet instanceof MovePacket) {
             MovePacket p = (MovePacket) packet;
             data.updatePlayersPos(p);
@@ -142,25 +126,9 @@ public class TomatoPacketCapture implements Controller {
             }
         } else if (isCrucibleResponsePacket(packet)) {
             // Handle CrucibleResponsePacket to extract damage multipliers
+            System.out.println("CRUCIBLE_RESPONSE_PACKET: " + packet);
             CrucibleBonusManager.processCrucibleResponse(packet);
         }
-    }
-
-    private String describePacket(Packet packet) {
-        if (packet == null) return "<null>";
-        return packet.getClass().getName();
-    }
-
-    private String describeCurrentMap() {
-        if (data.map == null) return "<none>";
-        return (
-            "name=\"" +
-            data.map.name +
-            "\", displayName=\"" +
-            data.map.displayName +
-            "\", seed=" +
-            data.map.seed
-        );
     }
 
     /**
