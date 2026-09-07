@@ -22,7 +22,6 @@ public class TickAligner {
     private RC4 rc4Fork;
     private byte[] TickA;
     private int CURRENT_TICK;
-    private int lastSyncOffset = -1;
 
     /**
      * Tick aligner constructor to a RC4 cipher.
@@ -74,7 +73,6 @@ public class TickAligner {
                     int i = RC4Aligner.syncCipher(rc4, TickA, tick, packetBytes);
                     if (i != -1) {
                         synced = true;
-                        lastSyncOffset = i;
                         rc4.skip(packetBytes).decrypt(tick);
                         rc4.skip(size - 5 - 4);
                         CURRENT_TICK = Util.decodeInt(tick);
@@ -96,27 +94,10 @@ public class TickAligner {
         return true;
     }
 
-    public boolean isSynced() {
-        return synced;
-    }
-
-    public boolean hasFirstSyncCandidate() {
-        return TickA != null;
-    }
-
-    public int getLastSyncOffset() {
-        return lastSyncOffset;
-    }
-
     /**
      * A reset method for resenting the tick counter. Called when changing game sessions.
      */
     public void reset() {
-        synced = false;
-        packetBytes = 0;
-        TickA = null;
         CURRENT_TICK = -1;
-        lastSyncOffset = -1;
-        rc4Fork = rc4.fork();
     }
 }

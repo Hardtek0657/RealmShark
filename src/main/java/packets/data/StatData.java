@@ -55,6 +55,7 @@ public class StatData implements Serializable {
                 || StatType.GUILD_NAME_STAT.get() == statTypeNum
                 || StatType.MATERIAL_STAT.get() == statTypeNum
                 || StatType.MATERIAL_CAP_STAT.get() == statTypeNum
+                || StatType.UNKNOWN_STRING_STAT_78.get() == statTypeNum
                 || StatType.UNIQUE_DATA_STRING.get() == statTypeNum
                 || StatType.GRAVE_ACCOUNT_ID.get() == statTypeNum
                 || StatType.MODIFIERS_STAT.get() == statTypeNum

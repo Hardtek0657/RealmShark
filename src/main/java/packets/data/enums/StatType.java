@@ -77,6 +77,8 @@ public enum StatType implements Serializable {
     LT_TIMER_STAT(68),
     MATERIAL_STAT(71),
     MATERIAL_CAP_STAT(72),
+    /** Metadata dump marks stat 78 as string-valued. Name remains unknown. */
+    UNKNOWN_STRING_STAT_78(78),
     UNIQUE_DATA_STRING(80),
     PET_INSTANCE_ID_STAT(81),
     PET_NAME_STAT(82),
