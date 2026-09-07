@@ -294,12 +294,12 @@ public class Entity implements Serializable {
                 // Only emit container/scaling discovery logs if the attacker is the local user AND this ability has scaling.
                 // This ensures we only debug lethal-strike / scaling client-side calculations for our own shots.
                 if (attacker != null && attacker.isUser() && hasScaling) {
-                    System.out.println(
-                        "[Entity] userProjectileHit: containerType=" +
-                            containerType +
-                            " hasScaling=" +
-                            hasScaling
-                    );
+                    //System.out.println(
+                    //    "[Entity] userProjectileHit: containerType=" +
+                    //        containerType +
+                    //        " hasScaling=" +
+                    //        hasScaling
+                    //);
                 }
                 if (hasScaling) {
                     // This is a proc projectile with scaling - attempt to use a stat snapshot
@@ -334,19 +334,19 @@ public class Entity implements Serializable {
                     dmg = baseDamage + statBonus;
                     // Only log the detailed proc scaling message for the local user
                     if (attacker != null && attacker.isUser()) {
-                        System.out.println(
-                            "[Entity] userProjectileHit: proc scaling applied containerType=" +
-                                containerType +
-                                " baseDamage=" +
-                                baseDamage +
-                                " statBonus=" +
-                                statBonus +
-                                " total=" +
-                                dmg +
-                                (statSnapshot != null
-                                    ? " (used snapshot)"
-                                    : " (used current)")
-                        );
+                        //System.out.println(
+                        //    "[Entity] userProjectileHit: proc scaling applied containerType=" +
+                        //        containerType +
+                        //       " baseDamage=" +
+                        //       baseDamage +
+                        //      " statBonus=" +
+                        //      statBonus +
+                        //      " total=" +
+                        //     dmg +
+                        //     (statSnapshot != null
+                        //         ? " (used snapshot)"
+                        //         : " (used current)")
+                        // );
                     }
                     isProcProjectile = true;
                 }

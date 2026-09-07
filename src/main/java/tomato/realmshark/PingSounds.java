@@ -95,11 +95,7 @@ public class PingSounds {
         try {
             Sound s = get(type);
             if (s != null) s.play();
-        } catch (Throwable t) {
-            System.out.println(
-                "[PingSounds] failed to play " + type.label + ": " + t
-            );
-        }
+        } catch (Throwable ignored) {}
     }
 
     private static Sound get(Type type) {
@@ -111,10 +107,6 @@ public class PingSounds {
             Sound s = new Sound(path);
             if (!s.isLoaded() && !FALLBACK.equals(path)) {
                 // Configured file is missing or an unsupported format.
-                System.out.println(
-                    "[PingSounds] could not load \"" + path +
-                    "\" for " + type.label + ", using default sound"
-                );
                 s = new Sound(FALLBACK);
             }
             CACHE.put(type, s);

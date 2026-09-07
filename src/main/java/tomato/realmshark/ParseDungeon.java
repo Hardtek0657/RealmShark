@@ -55,19 +55,13 @@ public class ParseDungeon {
     private static void loadAssets() {
         try {
             parseDungeonModifier();
-        } catch (Throwable t) {
-            System.out.println("[ParseDungeon] modifier parse failed: " + t);
-        }
+        } catch (Throwable ignored) {}
         try {
             parseDungeonPortalId();
-        } catch (Throwable t) {
-            System.out.println("[ParseDungeon] portal parse failed: " + t);
-        }
+        } catch (Throwable ignored) {}
         try {
             parseAllPortalObjects();
-        } catch (Throwable t) {
-            System.out.println("[ParseDungeon] portal scan failed: " + t);
-        }
+        } catch (Throwable ignored) {}
     }
 
     private static void parseDungeonModifier() {
@@ -76,9 +70,6 @@ public class ParseDungeon {
             // mods2.xml is absent as of the current release. A missing
             // supplementary file must not be fatal.
             if (!new File(path).isFile()) {
-                System.out.println(
-                    "[ParseDungeon] " + path + " not present, skipping"
-                );
                 continue;
             }
             try {
@@ -127,9 +118,6 @@ public class ParseDungeon {
         // Absent on a fresh install until assets are extracted. Same treatment
         // as the mods files: skip rather than throw.
         if (!new File(PORTAL_XML_PATH).isFile()) {
-            System.out.println(
-                "[ParseDungeon] " + PORTAL_XML_PATH + " not present, skipping"
-            );
             return;
         }
         try {
@@ -229,9 +217,7 @@ public class ParseDungeon {
             } catch (
                 ParserConfigurationException | IOException | SAXException e
             ) {
-                System.out.println(
-                    "[ParseDungeon] failed to parse " + f.getName() + ": " + e
-                );
+                // Skip malformed asset; keep other assets usable.
             }
         }
     }
