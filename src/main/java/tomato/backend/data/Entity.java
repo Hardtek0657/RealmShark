@@ -92,9 +92,32 @@ public class Entity implements Serializable {
     public void updateStats(ObjectStatusData status, long timePC) {
         statUpdates.add(status);
 
-        SecurityAbilityUseCheck.checkManaFromStasis(this, status.stats);
+        StatData previousMana = stat.get(StatType.MP_STAT);
+        StatData previousInventory = stat.get(StatType.INVENTORY_1_STAT);
+        boolean hasPreviousMana = previousMana != null;
+        boolean hasPreviousInventory = previousInventory != null;
+        int previousManaValue = hasPreviousMana ? previousMana.statValue : 0;
+        int previousInventoryValue = hasPreviousInventory
+            ? previousInventory.statValue
+            : 0;
 
-        SecurityAbilityUseCheck.checkManaFromDecoyUsed(this, status.stats);
+        SecurityAbilityUseCheck.checkManaFromStasis(
+            this,
+            status.stats,
+            hasPreviousMana,
+            previousManaValue,
+            hasPreviousInventory,
+            previousInventoryValue
+        );
+
+        SecurityAbilityUseCheck.checkManaFromDecoyUsed(
+            this,
+            status.stats,
+            hasPreviousMana,
+            previousManaValue,
+            hasPreviousInventory,
+            previousInventoryValue
+        );
 
         stat.setStats(status.stats);
 
